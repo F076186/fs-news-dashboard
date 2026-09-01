@@ -33,6 +33,9 @@ _cache_lock = threading.Lock()
 _cache: dict = {}
 _cache_ttl = 15 * 60  # 15 minutes
 
+# Track whether a background warm is in progress so /api/news never blocks
+_warming = threading.Event()  # set while a warm is in flight
+
 
 def _is_cache_valid() -> bool:
     if not _cache:
@@ -43,16 +46,20 @@ def _is_cache_valid() -> bool:
 
 def _refresh_cache():
     logger.info("Refreshing news cache…")
-    data = aggregate_all()
-    with _cache_lock:
-        _cache.clear()
-        _cache.update(data)
-        _cache["_cached_at"] = time.time()
-    logger.info(
-        "Cache updated — %d articles from %d sources",
-        data["total_articles"],
-        data["total_sources"],
-    )
+    _warming.set()
+    try:
+        data = aggregate_all()
+        with _cache_lock:
+            _cache.clear()
+            _cache.update(data)
+            _cache["_cached_at"] = time.time()
+        logger.info(
+            "Cache updated — %d articles from %d sources",
+            data["total_articles"],
+            data["total_sources"],
+        )
+    finally:
+        _warming.clear()
 
 
 def _background_refresh():
@@ -78,11 +85,24 @@ def api_news():
     Query params:
       - refresh=1  → force a live re-fetch (ignores cache)
       - category=<name>  → filter by category
+
+    If the cache is cold and a background warm is already running,
+    returns a 202 with warming=true instead of blocking the request.
+    If refresh=1 is forced, it waits for the warm to finish.
     """
     force = request.args.get("refresh", "0") == "1"
 
-    if force or not _is_cache_valid():
+    if force:
+        # Force: always kick off a fresh fetch (synchronous on demand)
         _refresh_cache()
+    elif not _is_cache_valid():
+        if _warming.is_set():
+            # Background thread is already warming — return 202 so the
+            # browser can poll instead of hanging on a blocked response
+            return jsonify({"warming": True, "message": "Cache is being populated, please retry shortly."}), 202
+        else:
+            # No warm in progress and cache is cold — start one now
+            _refresh_cache()
 
     with _cache_lock:
         data = dict(_cache)
@@ -174,6 +194,7 @@ def api_status():
             "status": "ok",
             "cache_age_seconds": age_s,
             "cache_valid": _is_cache_valid(),
+            "warming": _warming.is_set(),
             "total_articles": total,
             "sources_ok": sources_ok,
             "sources_error": sources_err,

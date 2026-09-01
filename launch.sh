@@ -68,6 +68,22 @@ for i in $(seq 1 20); do
   sleep 0.5
 done
 
+# ── 6b. Wait for initial cache warm (up to 45 s) ─────────────
+echo "  → Pre-warming news cache (fetching 18 sources)…"
+WARM_DOTS=""
+for i in $(seq 1 45); do
+  STATUS_JSON=$(curl -s --max-time 3 "${URL}/api/status" 2>/dev/null || echo '{}')
+  IS_VALID=$(echo "$STATUS_JSON" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('cache_valid','false'))" 2>/dev/null || echo "false")
+  if [ "$IS_VALID" = "True" ] || [ "$IS_VALID" = "true" ]; then
+    TOTAL=$(echo "$STATUS_JSON" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('total_articles',0))" 2>/dev/null || echo "0")
+    echo "  ✓ Cache ready — $TOTAL articles loaded"
+    break
+  fi
+  printf "."
+  sleep 1
+done
+echo ""
+
 # ── 7. Open in browser ───────────────────────────────────────
 echo "  → Opening dashboard in your browser…"
 echo ""

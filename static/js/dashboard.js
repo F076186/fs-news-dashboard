@@ -40,19 +40,32 @@ let _briefView     = "category";   // "category" | "region" | "matrix"
 const $  = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
-function showOverlay()  { $("#loadingOverlay").classList.remove("hidden"); }
-function hideOverlay()  { $("#loadingOverlay").classList.add("hidden"); }
-function showModal()    { $("#modalOverlay").classList.remove("hidden"); }
-function hideModal()    { $("#modalOverlay").classList.add("hidden"); }
+function showOverlay() {
+  const el = document.getElementById("loadingOverlay");
+  if (el) el.classList.remove("hidden");
+}
+function hideOverlay() {
+  const el = document.getElementById("loadingOverlay");
+  if (el) el.classList.add("hidden");
+}
+function showModal()  {
+  const el = document.getElementById("modalOverlay");
+  if (el) el.classList.remove("hidden");
+}
+function hideModal()  {
+  const el = document.getElementById("modalOverlay");
+  if (el) el.classList.add("hidden");
+}
 
 function setStatusPill(text, cls) {
-  const el = $("#statusPill");
+  const el = document.getElementById("statusPill");
+  if (!el) return;
   el.textContent = text;
   el.className = "status-pill " + (cls || "");
 }
 
 function setRefreshBtn(loading) {
-  const btn = $("#btnRefresh");
+  const btn = document.getElementById("btnRefresh");
   if (!btn) return;
   btn.disabled = loading;
   btn.classList.toggle("spinning", loading);
@@ -85,7 +98,8 @@ function escHtml(s) {
 
 // ── Loading dots (source progress) ─────────────────────────────────────
 function initSourceDots(count) {
-  const container = $("#sourceProgress");
+  const container = document.getElementById("sourceProgress");
+  if (!container) return;
   container.innerHTML = "";
   for (let i = 0; i < count; i++) {
     const d = document.createElement("div");
@@ -101,24 +115,66 @@ function tickDot(idx, status) {
 }
 
 // ── Fetch & render ──────────────────────────────────────────────────────
+
+// Safe t() fallback — if window.i18n failed to load, return the key
+const _t = (key) => {
+  try { return t(key); } catch { return key; }
+};
+
 async function loadNews(force = false) {
   showOverlay();
-  setStatusPill(t("statusLoading"), "loading");
+  setStatusPill(_t("statusLoading"), "loading");
   setRefreshBtn(true);
   initSourceDots(18);
 
   const url = force ? API_URL + "?refresh=1" : API_URL;
+
+  // Animate dots over ~25 seconds (covers typical cold-cache warm time)
   let dotIdx = 0;
   const dotTimer = setInterval(() => {
     if (dotIdx < 18) { tickDot(dotIdx++, "ok"); }
-  }, 350);
+  }, 1400);
+
+  // Also pulse loading message to show we're alive
+  const msgs = [
+    "Connecting to 18 sources…",
+    "Fetching Banking & Insurance news…",
+    "Scanning FinTech & RegTech feeds…",
+    "Reading McKinsey, BCG, Bain insights…",
+    "Checking EBA, EIOPA, ECB regulatory updates…",
+    "Building Intelligence Brief…",
+    "Almost ready…",
+  ];
+  let msgIdx = 0;
+  const loadingMsg = document.getElementById("loadingMsg");
+  const msgTimer = setInterval(() => {
+    if (loadingMsg && msgIdx < msgs.length - 1) {
+      loadingMsg.textContent = msgs[++msgIdx];
+    }
+  }, 3500);
 
   try {
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error("HTTP " + resp.status);
-    _data = await resp.json();
+    // Poll until data is ready (handles 202 warming response)
+    let attempts = 0;
+    let respData = null;
+    while (attempts < 40) {  // max ~40s wait
+      const resp = await fetch(url);
+      if (resp.status === 202) {
+        // Server is warming cache — wait and retry
+        attempts++;
+        await new Promise(r => setTimeout(r, 1000));
+        continue;
+      }
+      if (!resp.ok) throw new Error("HTTP " + resp.status);
+      respData = await resp.json();
+      break;
+    }
+    if (!respData) throw new Error("Server took too long to respond");
+
+    _data = respData;
 
     clearInterval(dotTimer);
+    clearInterval(msgTimer);
     while (dotIdx < 18) { tickDot(dotIdx++, "ok"); }
 
     // If French is active, translate now
@@ -128,9 +184,10 @@ async function loadNews(force = false) {
     _updateStatusAfterLoad(_data);
   } catch (err) {
     clearInterval(dotTimer);
+    clearInterval(msgTimer);
     console.error("Load failed:", err);
-    setStatusPill(t("statusFailed"), "err");
-    showErrorBanner(t("errorLoad") + err.message);
+    setStatusPill(_t("statusFailed"), "err");
+    showErrorBanner(_t("errorLoad") + err.message);
   } finally {
     hideOverlay();
     setRefreshBtn(false);

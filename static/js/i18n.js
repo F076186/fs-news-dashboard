@@ -141,7 +141,6 @@ const STRINGS = {
     "United Kingdom":   "Royaume-Uni",
     "European Union":   "Union Européenne",
     "France":           "France",
-    "Global":           "Mondial",
   },
 };
 
