@@ -73,7 +73,13 @@ function setRefreshBtn(loading) {
   if (svg) svg.style.animation = loading ? "spin .8s linear infinite" : "";
 }
 
-const { t, isFrench, applyStaticStrings, translateData, initLang } = window.i18n;
+// Safe i18n accessors — never crash even if i18n.js failed to load
+const _i18n       = window.i18n || {};
+const t           = _i18n.t           || ((k) => k);
+const isFrench    = _i18n.isFrench    || (() => false);
+const applyStaticStrings = _i18n.applyStaticStrings || (() => {});
+const translateData      = _i18n.translateData      || ((d) => Promise.resolve(d));
+const initLang           = _i18n.initLang           || (() => {});
 
 function fmtDate(iso) {
   if (!iso) return "";
@@ -691,6 +697,12 @@ async function onLangToggle(lang) {
 
 // ── Boot ────────────────────────────────────────────────────────────────
 (function init() {
+  // Safety net: force-hide overlay after 60 s no matter what
+  const safetyTimer = setTimeout(() => {
+    hideOverlay();
+    setRefreshBtn(false);
+  }, 60_000);
+
   try {
     initCategoryFilter();
     initIntelBriefTabs();
@@ -698,10 +710,10 @@ async function onLangToggle(lang) {
     initLang(onLangToggle);
     applyStaticStrings();
   } catch (e) {
-    // UI init error — log but don't block news loading
     console.error("UI init error:", e);
   }
+
   // Always attempt to load news regardless of UI init errors
-  loadNews(false);
+  loadNews(false).finally(() => clearTimeout(safetyTimer));
   startPolling();
 })();

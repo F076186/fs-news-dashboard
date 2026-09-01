@@ -121,6 +121,19 @@
 </div>
 
 <script src="/static/js/i18n.js"></script>
+<script>
+// Diagnostic: check i18n loaded correctly before dashboard.js runs
+(function() {
+  var overlay = document.getElementById("loadingOverlay");
+  if (!window.i18n) {
+    // i18n.js failed — hide overlay and show inline error
+    if (overlay) overlay.classList.add("hidden");
+    var msg = document.getElementById("loadingMsg");
+    if (msg) { msg.textContent = "JS init error: i18n module failed to load. Please hard-refresh (Cmd+Shift+R)."; }
+    console.error("window.i18n is undefined after i18n.js loaded");
+  }
+})();
+</script>
 <script src="/static/js/dashboard.js"></script>
 </body>
 </html>
