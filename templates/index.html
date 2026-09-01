@@ -6,11 +6,14 @@
 <title>FS Intelligence Dashboard</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2128;--border:#30363d;--border-light:#21262d;--text:#e6edf3;--text-muted:#8b949e;--text-dim:#4d5566;--accent:#2f81f7;--green:#3fb950;--red:#f85149;--orange:#d29922;--purple:#a371f7;--teal:#39d3bb;--radius:10px;--radius-sm:6px;--shadow:0 4px 16px rgba(0,0,0,.45);--font:-apple-system,"Segoe UI",system-ui,Helvetica,Arial,sans-serif}
+:root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2128;--border:#30363d;--border-light:#21262d;--text:#e6edf3;--text-muted:#8b949e;--text-dim:#4d5566;--accent:#2f81f7;--green:#3fb950;--red:#f85149;--orange:#d29922;--purple:#a371f7;--teal:#39d3bb;--radius:10px;--radius-sm:6px;--shadow:0 4px 16px rgba(0,0,0,.45);--font:-apple-system,"Segoe UI",system-ui,Helvetica,Arial,sans-serif;--header-bg:rgba(13,17,23,.96)}
+[data-theme="light"]{--bg:#f6f8fa;--surface:#ffffff;--surface2:#f0f2f5;--border:#d0d7de;--border-light:#e8ebef;--text:#1f2328;--text-muted:#57606a;--text-dim:#9198a1;--accent:#0969da;--green:#1a7f37;--red:#cf222e;--orange:#9a6700;--purple:#8250df;--teal:#0969da;--shadow:0 4px 16px rgba(0,0,0,.12);--header-bg:rgba(246,248,250,.96)}
 html{scroll-behavior:smooth}
 body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.6;min-height:100vh}
 a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
-.app-header{position:sticky;top:0;z-index:100;background:rgba(13,17,23,.96);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
+.app-header{position:sticky;top:0;z-index:100;background:var(--header-bg);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
+.btn-theme{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:var(--radius-sm);background:var(--surface2);border:1px solid var(--border);color:var(--text-muted);cursor:pointer;transition:background .15s,color .15s;flex-shrink:0}
+.btn-theme:hover{background:var(--border);color:var(--text)}
 .header-inner{max-width:1440px;margin:0 auto;padding:14px 24px 10px;display:flex;align-items:center;justify-content:space-between;gap:16px}
 .header-brand{display:flex;align-items:center;gap:14px}
 .brand-icon{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,#2f81f7 0%,#a371f7 100%);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;color:#fff;flex-shrink:0}
@@ -175,6 +178,19 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
       <button class="btn-lang" id="btnLang" title="Switch language">
         <span class="lang-flag">&#127468;&#127463;</span>
         <span class="lang-label" id="langLabel">FR</span>
+      </button>
+      <button class="btn-theme" id="btnTheme" title="Toggle light / dark mode">
+        <!-- moon icon shown in dark mode -->
+        <svg id="iconMoon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+        <!-- sun icon shown in light mode, hidden by default -->
+        <svg id="iconSun" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+          <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
       </button>
       <div class="last-updated" id="lastUpdated"></div>
     </div>
@@ -720,6 +736,31 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
     if (!tab || !tab.dataset.view) return;
     renderBriefView(tab.dataset.view);
   });
+
+  // ── Theme toggle ─────────────────────────────────────────────
+  var _theme = "dark";
+  function applyTheme(theme) {
+    _theme = theme;
+    var html = document.documentElement;
+    if (theme === "light") {
+      html.setAttribute("data-theme", "light");
+    } else {
+      html.removeAttribute("data-theme");
+    }
+    var moon = byId("iconMoon"), sun = byId("iconSun");
+    if (moon) moon.style.display = theme === "light" ? "none" : "";
+    if (sun)  sun.style.display  = theme === "light" ? "" : "none";
+    byId("btnTheme").title = theme === "light" ? "Passer en mode sombre" : "Passer en mode clair";
+    try { localStorage.setItem("fs-theme", theme); } catch(e) {}
+  }
+  byId("btnTheme").addEventListener("click", function() {
+    applyTheme(_theme === "dark" ? "light" : "dark");
+  });
+  // Restore saved preference
+  try {
+    var saved = localStorage.getItem("fs-theme");
+    if (saved === "light") applyTheme("light");
+  } catch(e) {}
 
   // ── Boot ──────────────────────────────────────────────────────
   loadNews(false);
