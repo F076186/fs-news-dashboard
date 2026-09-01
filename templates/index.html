@@ -35,6 +35,9 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .lang-flag{font-size:15px;line-height:1}
 .lang-label{font-size:12px;font-weight:700;letter-spacing:.5px}
 .last-updated{font-size:11px;color:var(--text-dim);white-space:nowrap}
+.live-clock{display:flex;flex-direction:column;align-items:flex-end;line-height:1.25;flex-shrink:0}
+.live-clock-time{font-size:22px;font-weight:800;letter-spacing:-.5px;color:var(--text);font-variant-numeric:tabular-nums}
+.live-clock-date{font-size:11.5px;color:var(--text-muted);letter-spacing:.2px}
 .cat-bar{max-width:1440px;margin:0 auto;padding:8px 24px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
 .cat-bar::-webkit-scrollbar{display:none}
 .cat-btn{padding:4px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text-muted);font-size:12.5px;cursor:pointer;white-space:nowrap;transition:all .15s}
@@ -171,6 +174,10 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
         <h1>Financial Services Intelligence</h1>
         <p>Live aggregation of News &middot; Trends &middot; Regulations &middot; Innovation &middot; Strategy</p>
       </div>
+      <div class="live-clock">
+        <span class="live-clock-time" id="clockTime"></span>
+        <span class="live-clock-date" id="clockDate"></span>
+      </div>
     </div>
     <div class="header-controls">
       <span class="status-pill loading" id="statusPill">Loading&hellip;</span>
@@ -205,7 +212,7 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
           <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
         </svg>
       </button>
-      <div class="last-updated" id="lastUpdated"></div>
+      <div class="last-updated" id="lastUpdated" style="display:none"></div>
     </div>
   </div>
   <nav class="cat-bar" id="catBar">
@@ -821,6 +828,17 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
     var saved = localStorage.getItem("fs-theme");
     if (saved === "light") applyTheme("light");
   } catch(e) {}
+
+  // ── Live clock ────────────────────────────────────────────────
+  function tickClock() {
+    var now = new Date();
+    var timeEl = byId("clockTime");
+    var dateEl = byId("clockDate");
+    if (timeEl) timeEl.textContent = now.toLocaleTimeString("fr-FR", {hour:"2-digit", minute:"2-digit", second:"2-digit"});
+    if (dateEl) dateEl.textContent = now.toLocaleDateString("fr-FR", {weekday:"long", day:"numeric", month:"long", year:"numeric"});
+  }
+  tickClock();
+  setInterval(tickClock, 1000);
 
   // ── Boot ──────────────────────────────────────────────────────
   loadNews(false);
