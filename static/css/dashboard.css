@@ -128,6 +128,22 @@ a:hover { text-decoration: underline; }
 .btn-refresh:hover { background: var(--border); border-color: var(--text-dim); }
 .btn-refresh:disabled { opacity: .5; cursor: not-allowed; }
 .btn-refresh.spinning svg { animation: spin .8s linear infinite; }
+.btn-pdf {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: rgba(163,113,247,.15);
+  border: 1px solid rgba(163,113,247,.4);
+  border-radius: var(--radius-sm);
+  color: #a371f7;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+.btn-pdf:hover { background: rgba(163,113,247,.28); border-color: rgba(163,113,247,.7); }
+.btn-pdf:disabled { opacity: .5; cursor: not-allowed; }
 .last-updated { font-size: 11px; color: var(--text-dim); white-space: nowrap; }
 
 /* Category Filter Bar */
@@ -510,4 +526,146 @@ a:hover { text-decoration: underline; }
   .articles-grid { grid-template-columns: 1fr; }
   .brand-text h1 { font-size: 15px; }
   .main-content { padding: 14px; }
+}
+
+/* ── Print / PDF ───────────────────────────────────────────────────────── */
+@media print {
+  /* Force dark background and colours to print */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  /* Hide interactive chrome */
+  .app-header .header-controls,
+  .cat-bar,
+  .loading-overlay,
+  .modal-overlay,
+  .btn-refresh,
+  .btn-pdf,
+  .card-footer,
+  .error-banner { display: none !important; }
+
+  /* Unfreeze the sticky header so it doesn't overlay content */
+  .app-header {
+    position: relative !important;
+    border-bottom: 2px solid #30363d !important;
+    padding-bottom: 8px !important;
+    background: #0d1117 !important;
+  }
+
+  body, html {
+    background: #0d1117 !important;
+    color: #e6edf3 !important;
+    font-size: 11pt;
+  }
+
+  /* Full-width layout on paper */
+  .main-content {
+    max-width: 100% !important;
+    padding: 16px !important;
+  }
+
+  /* Stats bar: wrap naturally */
+  .stats-bar {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+    margin-bottom: 20px !important;
+    page-break-inside: avoid;
+  }
+  .stat-card {
+    background: #161b22 !important;
+    border: 1px solid #30363d !important;
+    border-radius: 8px !important;
+    padding: 10px 14px !important;
+    flex: 1 1 130px !important;
+    min-width: 130px !important;
+  }
+  .stat-value { font-size: 20pt !important; }
+
+  /* Category sections: keep header + first cards together */
+  .category-section {
+    page-break-inside: avoid;
+    margin-bottom: 28px !important;
+    animation: none !important;
+  }
+  .cat-section-header {
+    border-bottom: 1px solid #30363d !important;
+    padding-bottom: 8px !important;
+    margin-bottom: 12px !important;
+  }
+
+  /* 3-column grid on wide paper, 2-col on A4 */
+  .articles-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 10px !important;
+  }
+
+  /* Article cards */
+  .article-card {
+    background: #161b22 !important;
+    border: 1px solid #30363d !important;
+    border-radius: 8px !important;
+    padding: 10px !important;
+    page-break-inside: avoid;
+    transform: none !important;
+    box-shadow: none !important;
+    cursor: default !important;
+  }
+  .article-card::before {
+    opacity: 1 !important;
+    height: 3px !important;
+  }
+  /* Show full title & summary — remove clamp */
+  .card-title {
+    -webkit-line-clamp: unset !important;
+    overflow: visible !important;
+    display: block !important;
+    font-size: 10pt !important;
+    font-weight: 700 !important;
+    margin-bottom: 4px !important;
+  }
+  .card-summary {
+    -webkit-line-clamp: unset !important;
+    overflow: visible !important;
+    display: block !important;
+    font-size: 9pt !important;
+    color: #8b949e !important;
+  }
+  .card-source-tag { font-size: 8pt !important; }
+  .card-date       { font-size: 8pt !important; }
+  .card-method-badge { display: none !important; }
+
+  /* Source status row */
+  .source-status-row {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    margin-bottom: 12px !important;
+  }
+  .source-badge {
+    background: #1c2128 !important;
+    border: 1px solid #30363d !important;
+    font-size: 9pt !important;
+  }
+
+  /* Keyword tags */
+  .kw-tag {
+    border: 1px solid #30363d !important;
+    font-size: 8pt !important;
+  }
+
+  /* PDF cover line: show timestamp as page header */
+  .header-brand { padding-bottom: 4px !important; }
+  .brand-text h1 { font-size: 16pt !important; }
+  .brand-text p  { font-size: 10pt !important; color: #8b949e !important; }
+
+  /* Page setup */
+  @page {
+    size: A4 landscape;
+    margin: 14mm 12mm;
+  }
 }

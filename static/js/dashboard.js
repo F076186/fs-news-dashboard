@@ -330,9 +330,51 @@ function startPolling() {
   }, POLL_INTERVAL);
 }
 
+// ── PDF Export ──────────────────────────────────────────────────────────
+function exportPdf() {
+  if (!_data) return;
+
+  const btn = $("#btnPdf");
+  btn.disabled = true;
+  btn.textContent = "Preparing…";
+
+  // Temporarily expand all clamped titles & summaries so the printed
+  // page shows full text (the @media print rule does this too, but this
+  // ensures it also works in browsers that ignore CSS clamp in print).
+  const clamped = document.querySelectorAll(".card-title, .card-summary");
+  clamped.forEach(el => el.style.webkitLineClamp = "unset");
+
+  // Set a meaningful document title → becomes the default PDF filename
+  const datestamp = new Date().toISOString().slice(0, 10);
+  const prevTitle = document.title;
+  document.title = `FS-Intelligence-Dashboard_${datestamp}`;
+
+  // Give the browser one frame to apply layout changes, then print
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      window.print();
+
+      // Restore after the print dialog closes
+      document.title = prevTitle;
+      clamped.forEach(el => el.style.webkitLineClamp = "");
+      btn.disabled = false;
+      btn.innerHTML = `
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+          <polyline points="10 9 9 9 8 9"/>
+        </svg>
+        Save PDF`;
+    }, 80);
+  });
+}
+
 // ── Keyboard / click handlers ───────────────────────────────────────────
 function initEventHandlers() {
   $("#btnRefresh").addEventListener("click", () => loadNews(true));
+  $("#btnPdf").addEventListener("click", exportPdf);
   $("#modalClose").addEventListener("click", hideModal);
   $("#modalOverlay").addEventListener("click", (e) => {
     if (e.target === $("#modalOverlay")) hideModal();
