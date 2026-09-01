@@ -246,12 +246,115 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
   var _lang = "en";
   var _txCache = {};
 
+  var FR = {
+    savePdf:"Enregistrer PDF",refresh:"Actualiser",statusLoading:"Chargement…",statusFailed:"Échec",all:"Tout",
+    statArticles:"Total Articles",statArticlesSub:"toutes sources confondues",
+    statActive:"Sources Actives",statFailed:"Sources en Échec",
+    statFailedOk:"toutes les sources répondent",statFailedErr:"vérifier le réseau",
+    statCats:"Catégories",statCatsSub:"segments sectoriels couverts",
+    statRefresh:"Fréquence d'actualisation",statRefreshSub:"rafraîchissement auto · RSS+HTML",
+    briefTitle:"Synthèse Intelligence",briefSub:"par catégorie & région",
+    tabCategory:"Par Catégorie",tabRegion:"Par Région",tabMatrix:"Catégorie × Région",
+    articles:"articles",readArticle:"Lire l'article →",rss:"RSS",web:"Web",
+    viaRss:"via RSS",viaWeb:"via web",readFull:"Lire l'article complet →",
+    noSummary:"Aucun résumé disponible.",errorLoad:"Échec du chargement : ",noData:"Aucune donnée disponible.",
+    "Banking News":"Actualités Bancaires","FinTech & Innovation":"FinTech & Innovation",
+    "Insurance":"Assurance","Regulation":"Réglementation","Strategy & Consulting":"Stratégie & Conseil",
+    "Global":"Mondial","North America":"Amérique du Nord","Europe":"Europe",
+    "Asia-Pacific":"Asie-Pacifique","Middle East & Africa":"Moyen-Orient & Afrique","Latin America":"Amérique Latine"
+  };
+
   function t(key) {
-    var s = { savePdf:"Save PDF",refresh:"Refresh",statusLoading:"Loading...",statusFailed:"Load failed",all:"All",statArticles:"Total Articles",statArticlesSub:"across all sources",statActive:"Sources Active",statFailed:"Sources Failed",statFailedOk:"all sources responding",statFailedErr:"check network",statCats:"Categories",statCatsSub:"industry segments covered",statRefresh:"Refresh Cadence",statRefreshSub:"auto-refresh · RSS+HTML",briefTitle:"Intelligence Brief",briefSub:"by category & region",tabCategory:"By Category",tabRegion:"By Region",tabMatrix:"Category × Region",articles:"articles",readArticle:"Read article →",rss:"RSS",web:"Web",viaRss:"via RSS",viaWeb:"via web",readFull:"Read full article →",noSummary:"No summary available.",errorLoad:"Failed to load news: ",noData:"No data yet." };
-    return s[key] !== undefined ? s[key] : key;
+    if (_lang === "fr" && FR[key] !== undefined) return FR[key];
+    var en = { savePdf:"Save PDF",refresh:"Refresh",statusLoading:"Loading…",statusFailed:"Load failed",all:"All",statArticles:"Total Articles",statArticlesSub:"across all sources",statActive:"Sources Active",statFailed:"Sources Failed",statFailedOk:"all sources responding",statFailedErr:"check network",statCats:"Categories",statCatsSub:"industry segments covered",statRefresh:"Refresh Cadence",statRefreshSub:"auto-refresh · RSS+HTML",briefTitle:"Intelligence Brief",briefSub:"by category & region",tabCategory:"By Category",tabRegion:"By Region",tabMatrix:"Category × Region",articles:"articles",readArticle:"Read article →",rss:"RSS",web:"Web",viaRss:"via RSS",viaWeb:"via web",readFull:"Read full article →",noSummary:"No summary available.",errorLoad:"Failed to load news: ",noData:"No data yet." };
+    return en[key] !== undefined ? en[key] : key;
   }
   function isFrench() { return _lang === "fr"; }
   function getLang()  { return _lang; }
+
+  // ── Batch translation via /api/translate ──────────────────────
+  function translateBatch(texts, cb) {
+    var results = new Array(texts.length);
+    var toFetch = [];
+    for (var i = 0; i < texts.length; i++) {
+      var txt = texts[i] || "";
+      if (!txt.trim()) { results[i] = txt; continue; }
+      if (_txCache[txt] !== undefined) { results[i] = _txCache[txt]; }
+      else { toFetch.push({ idx: i, text: txt }); }
+    }
+    if (toFetch.length === 0) { cb(results); return; }
+
+    var CHUNK = 20, done = 0, total = Math.ceil(toFetch.length / CHUNK);
+    function onChunkDone() { if (++done === total) cb(results); }
+
+    for (var c = 0; c < toFetch.length; c += CHUNK) {
+      (function(chunk) {
+        fetch("/api/translate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ texts: chunk.map(function(x) { return x.text; }) })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(json) {
+          var tr = json.translations || [];
+          for (var k = 0; k < chunk.length; k++) {
+            var v = tr[k] || chunk[k].text;
+            _txCache[chunk[k].text] = v;
+            results[chunk[k].idx] = v;
+          }
+          onChunkDone();
+        })
+        .catch(function() {
+          for (var k = 0; k < chunk.length; k++) {
+            _txCache[chunk[k].text] = chunk[k].text;
+            results[chunk[k].idx] = chunk[k].text;
+          }
+          onChunkDone();
+        });
+      })(toFetch.slice(c, c + CHUNK));
+    }
+  }
+
+  // Deep-translate data object, return new translated copy via callback
+  function translateData(data, cb) {
+    var texts = [], seen = {};
+    function addStr(s) {
+      if (s && typeof s === "string" && s.trim() && !_txCache[s] && !seen[s]) { seen[s] = true; texts.push(s); }
+    }
+    (data.all_articles || []).forEach(function(a) { addStr(a.title); addStr(a.summary); });
+    var brief = data.intelligence_brief || {};
+    Object.keys(brief.by_category || {}).forEach(function(k) {
+      var d = brief.by_category[k];
+      (d.theme_bullets || []).forEach(addStr);
+      (d.top_headlines || []).forEach(function(h) { addStr(h.title); });
+    });
+    Object.keys(brief.by_region || {}).forEach(function(k) {
+      var d = brief.by_region[k];
+      (d.theme_bullets || []).forEach(addStr);
+      (d.top_headlines || []).forEach(function(h) { addStr(h.title); });
+    });
+
+    translateBatch(texts, function() {
+      var tx = function(s) { return (s && _txCache[s] !== undefined) ? _txCache[s] : (s || ""); };
+      var out = JSON.parse(JSON.stringify(data)); // deep clone
+      (out.all_articles || []).forEach(function(a) { a.title = tx(a.title); a.summary = tx(a.summary); });
+      Object.keys(out.category_summaries || {}).forEach(function(cat) {
+        (out.category_summaries[cat].articles || []).forEach(function(a) { a.title = tx(a.title); a.summary = tx(a.summary); });
+      });
+      var ob = out.intelligence_brief || {};
+      Object.keys(ob.by_category || {}).forEach(function(k) {
+        var d = ob.by_category[k];
+        d.theme_bullets = (d.theme_bullets || []).map(tx);
+        (d.top_headlines || []).forEach(function(h) { h.title = tx(h.title); });
+      });
+      Object.keys(ob.by_region || {}).forEach(function(k) {
+        var d = ob.by_region[k];
+        d.theme_bullets = (d.theme_bullets || []).map(tx);
+        (d.top_headlines || []).forEach(function(h) { h.title = tx(h.title); });
+      });
+      cb(out);
+    });
+  }
 
   // ── State ─────────────────────────────────────────────────────
   var _data = null;
@@ -393,11 +496,11 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
   function renderStats(d) {
     var bar = byId("statsBar");
     if (!bar) return;
-    bar.innerHTML = '<div class="stat-card"><div class="stat-label">Total Articles</div><div class="stat-value accent">' + (d.total_articles||0) + '</div><div class="stat-sub">across all sources</div></div>' +
-      '<div class="stat-card"><div class="stat-label">Sources Active</div><div class="stat-value green">' + (d.sources_ok||0) + '</div><div class="stat-sub">of ' + (d.total_sources||0) + ' monitored</div></div>' +
-      '<div class="stat-card"><div class="stat-label">Sources Failed</div><div class="stat-value ' + ((d.sources_error||0)>0?"red":"green") + '">' + (d.sources_error||0) + '</div><div class="stat-sub">' + ((d.sources_error||0)>0?"check network":"all responding") + '</div></div>' +
-      '<div class="stat-card"><div class="stat-label">Categories</div><div class="stat-value orange">' + ((d.categories||[]).length) + '</div><div class="stat-sub">industry segments covered</div></div>' +
-      '<div class="stat-card"><div class="stat-label">Refresh Cadence</div><div class="stat-value" style="font-size:18px;color:var(--teal)">15 min</div><div class="stat-sub">auto-refresh · RSS+HTML</div></div>';
+    bar.innerHTML = '<div class="stat-card"><div class="stat-label">' + t("statArticles") + '</div><div class="stat-value accent">' + (d.total_articles||0) + '</div><div class="stat-sub">' + t("statArticlesSub") + '</div></div>' +
+      '<div class="stat-card"><div class="stat-label">' + t("statActive") + '</div><div class="stat-value green">' + (d.sources_ok||0) + '</div><div class="stat-sub">of ' + (d.total_sources||0) + ' monitored</div></div>' +
+      '<div class="stat-card"><div class="stat-label">' + t("statFailed") + '</div><div class="stat-value ' + ((d.sources_error||0)>0?"red":"green") + '">' + (d.sources_error||0) + '</div><div class="stat-sub">' + ((d.sources_error||0)>0?t("statFailedErr"):t("statFailedOk")) + '</div></div>' +
+      '<div class="stat-card"><div class="stat-label">' + t("statCats") + '</div><div class="stat-value orange">' + ((d.categories||[]).length) + '</div><div class="stat-sub">' + t("statCatsSub") + '</div></div>' +
+      '<div class="stat-card"><div class="stat-label">' + t("statRefresh") + '</div><div class="stat-value" style="font-size:18px;color:var(--teal)">15 min</div><div class="stat-sub">' + t("statRefreshSub") + '</div></div>';
   }
 
   function renderCategories(d) {
@@ -565,6 +668,33 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
     eb.classList.remove("hidden");
     byId("errorDetail").textContent = " " + errs.length + " source(s) unavailable: " + errs.map(function(r){return r.source_name;}).join(", ");
   }
+
+  // ── Language toggle ───────────────────────────────────────────
+  byId("btnLang").addEventListener("click", function() {
+    if (!_data) return;
+    _lang = _lang === "en" ? "fr" : "en";
+    var flag  = byId("btnLang").querySelector(".lang-flag");
+    var label = byId("langLabel");
+    if (_lang === "fr") {
+      if (flag)  flag.textContent  = "\uD83C\uDDEB\uD83C\uDDF7";
+      if (label) label.textContent = "EN";
+      // Show translating overlay while we fetch translations
+      var to = byId("translatingOverlay");
+      var tm = byId("translatingMsg");
+      if (to) to.classList.remove("hidden");
+      if (tm) tm.textContent = "Traduction en français…";
+      translateData(_data, function(translated) {
+        _displayData = translated;
+        if (to) to.classList.add("hidden");
+        renderAll(_displayData);
+      });
+    } else {
+      if (flag)  flag.textContent  = "\uD83C\uDDEC\uD83C\uDDE7";
+      if (label) label.textContent = "FR";
+      _displayData = _data;
+      renderAll(_displayData);
+    }
+  });
 
   // ── Event handlers ────────────────────────────────────────────
   byId("btnRefresh").addEventListener("click", function() { loadNews(true); });
