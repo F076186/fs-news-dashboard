@@ -99,22 +99,26 @@ def api_news():
 # ── Translation endpoint ─────────────────────────────────────────────────────
 _translation_cache: dict = {}
 _translation_lock = threading.Lock()
-_MYMEMORY_URL = "https://api.mymemory.translated.net/get"
+
+try:
+    from deep_translator import GoogleTranslator as _GoogleTranslator
+    _TRANSLATOR_AVAILABLE = True
+except ImportError:
+    _TRANSLATOR_AVAILABLE = False
+    logger.warning("deep-translator not installed — translation disabled")
 
 
 def _translate_text(text: str, src: str = "en", tgt: str = "fr") -> str:
-    if not text or not text.strip():
+    if not text or not text.strip() or not _TRANSLATOR_AVAILABLE:
         return text
     key = f"{src}:{tgt}:{text}"
     with _translation_lock:
         if key in _translation_cache:
             return _translation_cache[key]
     try:
-        resp = _requests.get(_MYMEMORY_URL, params={"q": text, "langpair": f"{src}|{tgt}"}, timeout=8)
-        data = resp.json()
-        translated = data.get("responseData", {}).get("translatedText", "")
-        result = translated if (translated and data.get("responseStatus") == 200) else text
-    except Exception:
+        result = _GoogleTranslator(source=src, target=tgt).translate(text) or text
+    except Exception as e:
+        logger.debug("Translation failed for %r: %s", text[:40], e)
         result = text
     with _translation_lock:
         _translation_cache[key] = result
@@ -127,7 +131,11 @@ def api_translate():
     texts = body.get("texts", [])
     if not isinstance(texts, list):
         return jsonify({"error": "texts must be a list"}), 400
-    return jsonify({"translations": [_translate_text(str(t)) for t in texts]})
+    # Translate concurrently — each call is independent
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        results = list(ex.map(lambda t: _translate_text(str(t)), texts))
+    return jsonify({"translations": results})
 
 
 @app.route("/api/status")
