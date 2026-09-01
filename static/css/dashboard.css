@@ -144,6 +144,51 @@ a:hover { text-decoration: underline; }
 }
 .btn-pdf:hover { background: rgba(163,113,247,.28); border-color: rgba(163,113,247,.7); }
 .btn-pdf:disabled { opacity: .5; cursor: not-allowed; }
+.btn-lang {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+  white-space: nowrap;
+}
+.btn-lang:hover { background: var(--border); border-color: var(--text-dim); }
+.btn-lang.fr-active {
+  background: rgba(0,82,179,.18);
+  border-color: rgba(0,82,179,.5);
+  color: #6aadff;
+}
+.lang-flag { font-size: 15px; line-height: 1; }
+.lang-label { font-size: 12px; font-weight: 700; letter-spacing: .5px; }
+/* Translating spinner overlay on content */
+.translating-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  background: rgba(13,17,23,.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(3px);
+}
+.translating-overlay.hidden { display: none; }
+.translating-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 28px 36px;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+.translating-card .spinner { width: 32px; height: 32px; margin: 0 auto 14px; }
+.translating-card p { font-size: 14px; color: var(--text-muted); }
 .last-updated { font-size: 11px; color: var(--text-dim); white-space: nowrap; }
 
 /* Category Filter Bar */

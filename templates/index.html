@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" id="htmlRoot">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -35,7 +35,11 @@
           <line x1="16" y1="17" x2="8" y2="17"/>
           <polyline points="10 9 9 9 8 9"/>
         </svg>
-        Save PDF
+        <span data-i18n="savePdf">Save PDF</span>
+      </button>
+      <button class="btn-lang" id="btnLang" title="Switch language / Changer de langue">
+        <span class="lang-flag">🇬🇧</span>
+        <span class="lang-label" id="langLabel">FR</span>
       </button>
       <div class="last-updated" id="lastUpdated">–</div>
     </div>
@@ -43,7 +47,7 @@
 
   <!-- Category Filter Bar -->
   <nav class="cat-bar" id="catBar">
-    <button class="cat-btn active" data-cat="all">All</button>
+    <button class="cat-btn active" data-cat="all" data-i18n="all">All</button>
     {% for cat in categories %}
     <button class="cat-btn" data-cat="{{ cat }}">{{ cat }}</button>
     {% endfor %}
@@ -54,8 +58,8 @@
 <div class="loading-overlay" id="loadingOverlay">
   <div class="loading-card">
     <div class="spinner"></div>
-    <p class="loading-title">Fetching Financial Intelligence</p>
-    <p class="loading-sub" id="loadingMsg">Connecting to 19 sources across Banking, Insurance, FinTech &amp; Regulatory bodies…</p>
+    <p class="loading-title" data-i18n="loadingTitle">Fetching Financial Intelligence</p>
+    <p class="loading-sub" id="loadingMsg" data-i18n="loadingMsg">Connecting to 18 sources across Banking, Insurance, FinTech &amp; Regulatory bodies…</p>
     <div class="source-progress" id="sourceProgress"></div>
   </div>
 </div>
@@ -71,13 +75,13 @@
     <div class="intel-brief-header">
       <div class="intel-brief-title-row">
         <span class="intel-brief-icon">⚡</span>
-        <h2 class="intel-brief-title">Intelligence Brief</h2>
-        <span class="intel-brief-sub">Structured digest · by category &amp; region</span>
+        <h2 class="intel-brief-title" data-i18n="briefTitle">Intelligence Brief</h2>
+        <span class="intel-brief-sub" data-i18n="briefSub">Structured digest · by category &amp; region</span>
       </div>
       <div class="intel-brief-tabs" id="intelTabs">
-        <button class="intel-tab active" data-view="category">By Category</button>
-        <button class="intel-tab" data-view="region">By Region</button>
-        <button class="intel-tab" data-view="matrix">Category × Region</button>
+        <button class="intel-tab active" data-view="category" data-i18n="tabCategory">By Category</button>
+        <button class="intel-tab" data-view="region" data-i18n="tabRegion">By Region</button>
+        <button class="intel-tab" data-view="matrix" data-i18n="tabMatrix">Category × Region</button>
       </div>
     </div>
     <div class="intel-brief-body" id="intelBody"></div>
@@ -88,7 +92,7 @@
 
   <!-- Error Banner -->
   <div class="error-banner hidden" id="errorBanner">
-    <strong>⚠ Some sources failed to load.</strong>
+    <strong data-i18n="errorSources">⚠ Some sources failed to load.</strong>
     <span id="errorDetail"></span>
   </div>
 
@@ -104,10 +108,19 @@
     <h2 class="modal-title" id="modalTitle"></h2>
     <p class="modal-meta" id="modalMeta"></p>
     <p class="modal-summary" id="modalSummary"></p>
-    <a class="modal-cta" id="modalLink" target="_blank" rel="noopener">Read full article →</a>
+    <a class="modal-cta" id="modalLink" target="_blank" rel="noopener" data-i18n="readFull">Read full article →</a>
   </div>
 </div>
 
+<!-- ══════════════ TRANSLATING OVERLAY ══════════════ -->
+<div class="translating-overlay hidden" id="translatingOverlay">
+  <div class="translating-card">
+    <div class="spinner"></div>
+    <p id="translatingMsg">Translating to French…</p>
+  </div>
+</div>
+
+<script src="/static/js/i18n.js"></script>
 <script src="/static/js/dashboard.js"></script>
 </body>
 </html>

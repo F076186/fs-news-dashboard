@@ -30,7 +30,8 @@ const REGION_COLORS = {
 };
 
 // ── State ───────────────────────────────────────────────────────────────
-let _data          = null;
+let _data          = null;   // raw EN data from server
+let _displayData   = null;   // current display data (EN or FR translated copy)
 let _activeFilter  = "all";
 let _polling       = null;
 let _briefView     = "category";   // "category" | "region" | "matrix"
@@ -57,15 +58,18 @@ function setRefreshBtn(loading) {
   btn.querySelector("svg").style.animation = loading ? "spin .8s linear infinite" : "";
 }
 
+const { t, isFrench, applyStaticStrings, translateData, initLang } = window.i18n;
+
 function fmtDate(iso) {
   if (!iso) return "";
   try {
-    const d = new Date(iso);
+    const d   = new Date(iso);
     const now = new Date();
     const diffH = (now - d) / 36e5;
-    if (diffH < 1) return Math.round(diffH * 60) + "m ago";
-    if (diffH < 24) return Math.round(diffH) + "h ago";
-    return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+    const locale = isFrench() ? "fr-FR" : "en-GB";
+    if (diffH < 1) return Math.round(diffH * 60) + (isFrench() ? " min" : "m ago");
+    if (diffH < 24) return Math.round(diffH) + (isFrench() ? " h" : "h ago");
+    return d.toLocaleDateString(locale, { day: "numeric", month: "short" });
   } catch { return iso; }
 }
 
@@ -97,15 +101,14 @@ function tickDot(idx, status) {
 // ── Fetch & render ──────────────────────────────────────────────────────
 async function loadNews(force = false) {
   showOverlay();
-  setStatusPill("Loading…", "loading");
+  setStatusPill(t("statusLoading"), "loading");
   setRefreshBtn(true);
-  initSourceDots(19);
+  initSourceDots(18);
 
   const url = force ? API_URL + "?refresh=1" : API_URL;
-  // Animate dots progressively while waiting
   let dotIdx = 0;
   const dotTimer = setInterval(() => {
-    if (dotIdx < 19) { tickDot(dotIdx++, "ok"); }
+    if (dotIdx < 18) { tickDot(dotIdx++, "ok"); }
   }, 350);
 
   try {
@@ -114,99 +117,122 @@ async function loadNews(force = false) {
     _data = await resp.json();
 
     clearInterval(dotTimer);
-    // Mark remaining dots
-    while (dotIdx < 19) { tickDot(dotIdx++, "ok"); }
+    while (dotIdx < 18) { tickDot(dotIdx++, "ok"); }
 
-    render();
-    const fetched = _data.fetched_at
-      ? new Date(_data.fetched_at).toLocaleTimeString("en-GB")
-      : "";
-    $("#lastUpdated").textContent = fetched ? "Last updated " + fetched : "";
+    // If French is active, translate now
+    _displayData = isFrench() ? await _translateAndShow(_data) : _data;
 
-    const errCount = _data.sources_error || 0;
-    if (errCount > 0) {
-      setStatusPill(
-        `${_data.sources_ok}/${_data.total_sources} sources · ${errCount} failed`,
-        "err"
-      );
-    } else {
-      setStatusPill(`${_data.sources_ok}/${_data.total_sources} sources · ${_data.total_articles} articles`, "ok");
-    }
+    _renderWithData(_displayData);
+    _updateStatusAfterLoad(_data);
   } catch (err) {
     clearInterval(dotTimer);
     console.error("Load failed:", err);
-    setStatusPill("Load failed", "err");
-    showErrorBanner("Failed to load news: " + err.message);
+    setStatusPill(t("statusFailed"), "err");
+    showErrorBanner(t("errorLoad") + err.message);
   } finally {
     hideOverlay();
     setRefreshBtn(false);
   }
 }
 
+function _updateStatusAfterLoad(data) {
+  const locale = isFrench() ? "fr-FR" : "en-GB";
+  const fetched = data.fetched_at
+    ? new Date(data.fetched_at).toLocaleTimeString(locale)
+    : "";
+  $("#lastUpdated").textContent = fetched ? t("lastUpdatedPfx") + fetched : "";
+
+  const errCount = data.sources_error || 0;
+  if (errCount > 0) {
+    setStatusPill(t("statusErr")(data.sources_ok, data.total_sources, errCount), "err");
+  } else {
+    setStatusPill(t("statusOk")(data.sources_ok, data.total_sources, data.total_articles), "ok");
+  }
+}
+
+async function _translateAndShow(data) {
+  const overlay = $("#translatingOverlay");
+  const msg     = $("#translatingMsg");
+  msg.textContent = t("translatingMsg");
+  overlay.classList.remove("hidden");
+  try {
+    const translated = await translateData(data);
+    return translated;
+  } finally {
+    overlay.classList.add("hidden");
+  }
+}
+
 // ── Render ──────────────────────────────────────────────────────────────
 function render() {
-  if (!_data) return;
-  renderStats();
-  renderIntelBrief();
-  renderCategories();
+  if (!_displayData) return;
+  _renderWithData(_displayData);
+}
+
+function _renderWithData(d) {
+  renderStats(d);
+  renderIntelBrief(d);
+  renderCategories(d);
   updateErrorBanner();
 }
 
-function renderStats() {
+function renderStats(d) {
+  d = d || _displayData;
   const bar = $("#statsBar");
-  const d   = _data;
   bar.innerHTML = `
     <div class="stat-card">
-      <div class="stat-label">Total Articles</div>
+      <div class="stat-label">${t("statArticles")}</div>
       <div class="stat-value accent">${d.total_articles || 0}</div>
-      <div class="stat-sub">across all sources</div>
+      <div class="stat-sub">${t("statArticlesSub")}</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">Sources Active</div>
+      <div class="stat-label">${t("statActive")}</div>
       <div class="stat-value green">${d.sources_ok || 0}</div>
-      <div class="stat-sub">of ${d.total_sources || 0} monitored</div>
+      <div class="stat-sub">${t("statActiveSub")(d.total_sources || 0)}</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">Sources Failed</div>
+      <div class="stat-label">${t("statFailed")}</div>
       <div class="stat-value ${d.sources_error > 0 ? "red" : "green"}">${d.sources_error || 0}</div>
-      <div class="stat-sub">${d.sources_error > 0 ? "check network / site availability" : "all sources responding"}</div>
+      <div class="stat-sub">${d.sources_error > 0 ? t("statFailedErr") : t("statFailedOk")}</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">Categories</div>
+      <div class="stat-label">${t("statCats")}</div>
       <div class="stat-value orange">${(d.categories || []).length}</div>
-      <div class="stat-sub">industry segments covered</div>
+      <div class="stat-sub">${t("statCatsSub")}</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">Refresh Cadence</div>
+      <div class="stat-label">${t("statRefresh")}</div>
       <div class="stat-value" style="font-size:18px;color:var(--teal)">15 min</div>
-      <div class="stat-sub">auto-refresh · RSS + HTML fallback</div>
+      <div class="stat-sub">${t("statRefreshSub")}</div>
     </div>
   `;
 }
 
-function renderCategories() {
+function renderCategories(d) {
+  d = d || _displayData;
   const container = $("#categorySections");
   container.innerHTML = "";
 
-  const summaries = _data.category_summaries || {};
-  const cats      = _data.categories || Object.keys(summaries);
+  // Active filter may be in original EN or translated FR cat name
+  const summaries = d.category_summaries || {};
+  const cats      = d.categories || Object.keys(summaries);
 
   for (const cat of cats) {
+    // Filter matching: compare both translated name and English name
     if (_activeFilter !== "all" && _activeFilter !== cat) continue;
     const info = summaries[cat];
     if (!info) continue;
 
-    const color = CAT_COLORS[cat] || "#8b949e";
+    // Color lookup: try translated name first, then EN name
+    const color = CAT_COLORS[cat] || CAT_COLORS[_enCatName(cat)] || "#8b949e";
     const section = document.createElement("section");
     section.className = "category-section";
     section.dataset.cat = cat;
 
-    // Keywords chips
     const kwHtml = (info.keywords || []).slice(0, 8).map(k =>
       `<span class="kw-tag">${escHtml(k)}</span>`
     ).join("");
 
-    // Source badges
     const srcBadges = (info.sources || []).map(s => {
       const cls = s.status === "ok" ? "ok" : "err";
       const cnt = s.count ? ` <span class="cnt">${s.count}</span>` : "";
@@ -219,22 +245,21 @@ function renderCategories() {
       <div class="cat-section-header">
         <span class="cat-dot" style="background:${color}"></span>
         <h2 class="cat-section-title">${escHtml(cat)}</h2>
-        <span class="cat-count">${info.count || 0} articles</span>
+        <span class="cat-count">${info.count || 0} ${t("articles")}</span>
         <div class="cat-keywords">${kwHtml}</div>
       </div>
       <div class="source-status-row">${srcBadges}</div>
-      <div class="articles-grid" id="grid-${escHtml(cat.replace(/\s+/g,"-"))}"></div>
+      <div class="articles-grid" id="grid-${escHtml(cat.replace(/\W+/g,"-"))}"></div>
     `;
 
     container.appendChild(section);
 
-    // Render article cards
-    const gridId = "grid-" + cat.replace(/\s+/g, "-");
-    const grid   = document.getElementById(gridId);
+    const gridId  = "grid-" + cat.replace(/\W+/g, "-");
+    const grid    = document.getElementById(gridId);
     const articles = info.articles || [];
 
     if (articles.length === 0) {
-      grid.innerHTML = `<div class="empty-state">No articles retrieved from this category.</div>`;
+      grid.innerHTML = `<div class="empty-state">${t("noData")}</div>`;
     } else {
       for (const a of articles) {
         grid.appendChild(makeCard(a, color));
@@ -242,6 +267,15 @@ function renderCategories() {
     }
   }
 }
+
+// Map a possibly-translated cat name back to its EN key for colour lookup
+const _enCatName = (() => {
+  const fr2en = {};
+  ["Banking News","FinTech & Innovation","Insurance","Regulation","Strategy & Consulting"].forEach(en => {
+    fr2en[t(en)] = en;
+  });
+  return (name) => fr2en[name] || name;
+})();
 
 function makeCard(article, catColor) {
   const card = document.createElement("article");
@@ -252,7 +286,7 @@ function makeCard(article, catColor) {
   const title = escHtml(article.title);
   const src   = escHtml(article.source_name);
   const sum   = escHtml(article.summary || "");
-  const meth  = article.method === "rss" ? "RSS" : "Web";
+  const meth  = article.method === "rss" ? t("rss") : t("web");
 
   card.innerHTML = `
     <div class="card-source-row">
@@ -265,7 +299,7 @@ function makeCard(article, catColor) {
     <div class="card-title">${title}</div>
     ${sum ? `<div class="card-summary">${sum}</div>` : ""}
     <div class="card-footer">
-      <span class="card-read-link">Read article →</span>
+      <span class="card-read-link">${t("readArticle")}</span>
     </div>
   `;
 
@@ -289,55 +323,56 @@ function openModal(article, catColor) {
   $("#modalMeta").textContent    = [
     article.category,
     article.published ? fmtDate(article.published) : "",
-    article.method === "rss" ? "via RSS" : "via web"
+    article.method === "rss" ? t("viaRss") : t("viaWeb")
   ].filter(Boolean).join(" · ");
-  $("#modalSummary").textContent = article.summary || "No summary available.";
-  $("#modalLink").href            = article.url;
+  $("#modalSummary").textContent = article.summary || t("noSummary");
+  $("#modalLink").textContent    = t("readFull");
+  $("#modalLink").href           = article.url;
   showModal();
 }
 
 // ── Error banner ────────────────────────────────────────────────────────
 // ── Intelligence Brief ──────────────────────────────────────────────────
 
-function renderIntelBrief() {
-  const brief = (_data || {}).intelligence_brief;
+function renderIntelBrief(d) {
+  d = d || _displayData;
+  const brief = (d || {}).intelligence_brief;
   const section = $("#intelBrief");
   if (!brief) { section.classList.add("hidden"); return; }
   section.classList.remove("hidden");
-  _renderBriefView(_briefView);
+  _renderBriefView(_briefView, brief);
 }
 
-function _renderBriefView(view) {
+function _renderBriefView(view, brief) {
   _briefView = view;
-  const brief = (_data || {}).intelligence_brief;
+  brief = brief || (_displayData || {}).intelligence_brief;
   if (!brief) return;
 
   // Sync tab active state
-  $$(".intel-tab").forEach(t => {
-    t.classList.toggle("active", t.dataset.view === view);
+  $$(".intel-tab").forEach(tab => {
+    tab.classList.toggle("active", tab.dataset.view === view);
   });
 
   const body = $("#intelBody");
-  if (view === "category")  { body.innerHTML = _buildByCategoryHTML(brief); }
+  if (view === "category")    { body.innerHTML = _buildByCategoryHTML(brief); }
   else if (view === "region") { body.innerHTML = _buildByRegionHTML(brief); }
-  else                       { body.innerHTML = _buildMatrixHTML(brief); }
+  else                        { body.innerHTML = _buildMatrixHTML(brief); }
 }
 
 // ── By-Category HTML ────────────────────────────────────────────────────
 function _buildByCategoryHTML(brief) {
   const cats = Object.keys(brief.by_category);
-  if (!cats.length) return `<p style="color:var(--text-dim)">No data yet.</p>`;
+  if (!cats.length) return `<p style="color:var(--text-dim)">${t("noData")}</p>`;
 
   const cards = cats.map(cat => {
     const d     = brief.by_category[cat];
-    const color = CAT_COLORS[cat] || "#8b949e";
+    const color = CAT_COLORS[cat] || CAT_COLORS[_enCatName(cat)] || "#8b949e";
 
-    const themeHtml = (d.themes || []).map(t =>
-      `<span class="brief-theme-tag">${escHtml(t)}</span>`
+    const themeHtml = (d.themes || []).map(th =>
+      `<span class="brief-theme-tag">${escHtml(th)}</span>`
     ).join("");
 
     const bulletHtml = (d.theme_bullets || []).map(b => {
-      // bold the **text** markers
       const formatted = escHtml(b).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
       return `<li>${formatted}</li>`;
     }).join("");
@@ -355,7 +390,7 @@ function _buildByCategoryHTML(brief) {
       <div class="brief-cat-card" style="--cat-color:${color}">
         <div class="brief-cat-card-title">
           ${escHtml(cat)}
-          <span class="brief-count-badge">${d.count} articles</span>
+          <span class="brief-count-badge">${d.count} ${t("articles")}</span>
         </div>
         <div class="brief-themes">${themeHtml}</div>
         <ul class="brief-bullets">${bulletHtml}</ul>
@@ -370,15 +405,15 @@ function _buildByCategoryHTML(brief) {
 // ── By-Region HTML ──────────────────────────────────────────────────────
 function _buildByRegionHTML(brief) {
   const regions = brief.regions || Object.keys(brief.by_region);
-  if (!regions.length) return `<p style="color:var(--text-dim)">No data yet.</p>`;
+  if (!regions.length) return `<p style="color:var(--text-dim)">${t("noData")}</p>`;
 
   const cards = regions.map(reg => {
     const d     = brief.by_region[reg];
     if (!d) return "";
-    const color = REGION_COLORS[reg] || "#39d3bb";
+    const color = REGION_COLORS[reg] || REGION_COLORS[_enRegName(reg)] || "#39d3bb";
 
-    const themeHtml = (d.themes || []).map(t =>
-      `<span class="brief-theme-tag">${escHtml(t)}</span>`
+    const themeHtml = (d.themes || []).map(th =>
+      `<span class="brief-theme-tag">${escHtml(th)}</span>`
     ).join("");
 
     const bulletHtml = (d.theme_bullets || []).map(b => {
@@ -392,7 +427,7 @@ function _buildByRegionHTML(brief) {
     ).join("");
 
     const catChips = (d.categories_present || []).map(c =>
-      `<span class="brief-region-chip" style="color:${CAT_COLORS[c]||'#8b949e'}">${escHtml(c)}</span>`
+      `<span class="brief-region-chip" style="color:${CAT_COLORS[c]||CAT_COLORS[_enCatName(c)]||'#8b949e'}">${escHtml(c)}</span>`
     ).join("");
 
     const countries = (d.countries || []).join(" · ");
@@ -401,7 +436,7 @@ function _buildByRegionHTML(brief) {
       <div class="brief-region-card" style="--region-color:${color}">
         <div class="brief-region-card-title">
           ${escHtml(reg)}
-          <span class="brief-count-badge">${d.count} articles</span>
+          <span class="brief-count-badge">${d.count} ${t("articles")}</span>
         </div>
         ${countries ? `<div class="brief-countries">${escHtml(countries)}</div>` : ""}
         <div class="brief-themes">${themeHtml}</div>
@@ -414,19 +449,28 @@ function _buildByRegionHTML(brief) {
   return `<div class="brief-region-grid">${cards}</div>`;
 }
 
+// Map a possibly-translated region name back to its EN key for colour lookup
+const _enRegName = (() => {
+  const fr2en = {};
+  ["Global","North America","Europe","Asia-Pacific","Middle East & Africa","Latin America"].forEach(en => {
+    fr2en[t(en)] = en;
+  });
+  return (name) => fr2en[name] || name;
+})();
+
 // ── Matrix HTML ─────────────────────────────────────────────────────────
 function _buildMatrixHTML(brief) {
   const cats    = Object.keys(brief.by_category);
   const regions = brief.regions || Object.keys(brief.by_region);
-  if (!cats.length || !regions.length) return `<p style="color:var(--text-dim)">No data yet.</p>`;
+  if (!cats.length || !regions.length) return `<p style="color:var(--text-dim)">${t("noData")}</p>`;
 
   const thead = `<tr>
-    <th class="cat-header">Category \\ Region</th>
-    ${regions.map(r => `<th style="color:${REGION_COLORS[r]||'#39d3bb'}">${escHtml(r)}</th>`).join("")}
+    <th class="cat-header">${isFrench() ? "Catégorie \\ Région" : "Category \\ Region"}</th>
+    ${regions.map(r => `<th style="color:${REGION_COLORS[r]||REGION_COLORS[_enRegName(r)]||'#39d3bb'}">${escHtml(r)}</th>`).join("")}
   </tr>`;
 
   const rows = cats.map(cat => {
-    const catColor = CAT_COLORS[cat] || "#8b949e";
+    const catColor = CAT_COLORS[cat] || CAT_COLORS[_enCatName(cat)] || "#8b949e";
     const cells = regions.map(reg => {
       const cell = (brief.matrix[cat] || {})[reg];
       if (!cell) return `<td><span class="matrix-cell-empty">—</span></td>`;
@@ -486,7 +530,7 @@ function updateErrorBanner() {
     return;
   }
   const names = errs.map(r => r.source_name).join(", ");
-  showErrorBanner(`${errs.length} source(s) unavailable: ${names}`);
+  showErrorBanner(t("errorUnav")(errs.length, names));
 }
 
 // ── Category filter ─────────────────────────────────────────────────────
@@ -498,7 +542,7 @@ function initCategoryFilter() {
     $$(".cat-btn").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
     _activeFilter = btn.dataset.cat;
-    if (_data) renderCategories();
+    if (_displayData) renderCategories();
   });
 }
 
@@ -519,11 +563,11 @@ function startPolling() {
 
 // ── PDF Export ──────────────────────────────────────────────────────────
 function exportPdf() {
-  if (!_data) return;
+  if (!_displayData) return;
 
   const btn = $("#btnPdf");
   btn.disabled = true;
-  btn.textContent = "Preparing…";
+  btn.textContent = isFrench() ? "Préparation…" : "Preparing…";
 
   // Temporarily expand all clamped titles & summaries so the printed
   // page shows full text (the @media print rule does this too, but this
@@ -534,7 +578,9 @@ function exportPdf() {
   // Set a meaningful document title → becomes the default PDF filename
   const datestamp = new Date().toISOString().slice(0, 10);
   const prevTitle = document.title;
-  document.title = `FS-Intelligence-Dashboard_${datestamp}`;
+  document.title = isFrench()
+    ? `Tableau-de-Bord-FS-Intelligence_${datestamp}`
+    : `FS-Intelligence-Dashboard_${datestamp}`;
 
   // Give the browser one frame to apply layout changes, then print
   requestAnimationFrame(() => {
@@ -553,7 +599,7 @@ function exportPdf() {
           <line x1="16" y1="17" x2="8" y2="17"/>
           <polyline points="10 9 9 9 8 9"/>
         </svg>
-        Save PDF`;
+        <span data-i18n="savePdf">${t("savePdf")}</span>`;
     }, 80);
   });
 }
@@ -571,11 +617,26 @@ function initEventHandlers() {
   });
 }
 
+// ── Language toggle handler ──────────────────────────────────────────────
+async function onLangToggle(lang) {
+  if (!_data) return;
+  if (lang === "fr") {
+    _displayData = await _translateAndShow(_data);
+  } else {
+    _displayData = _data;
+  }
+  applyStaticStrings();
+  _renderWithData(_displayData);
+  _updateStatusAfterLoad(_data);
+}
+
 // ── Boot ────────────────────────────────────────────────────────────────
 (function init() {
   initCategoryFilter();
   initIntelBriefTabs();
   initEventHandlers();
+  initLang(onLangToggle);
+  applyStaticStrings();
   loadNews(false);
   startPolling();
 })();

@@ -8,6 +8,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
+import requests as _requests
 from flask import Flask, jsonify, render_template, request
 
 from scrapers.aggregator import aggregate_all
@@ -101,6 +102,62 @@ def api_news():
     # Remove internal key
     data.pop("_cached_at", None)
     return jsonify(data)
+
+
+# ── Translation endpoint ─────────────────────────────────────────────────────
+# Uses MyMemory (free, no key required, 10 000 words/day).
+# Results are cached in memory for the session lifetime.
+_translation_cache: dict = {}
+_translation_lock = threading.Lock()
+
+_MYMEMORY_URL = "https://api.mymemory.translated.net/get"
+
+
+def _translate_text(text: str, src: str = "en", tgt: str = "fr") -> str:
+    """Translate a single text string. Returns original on failure."""
+    if not text or not text.strip():
+        return text
+    key = f"{src}:{tgt}:{text}"
+    with _translation_lock:
+        if key in _translation_cache:
+            return _translation_cache[key]
+    try:
+        resp = _requests.get(
+            _MYMEMORY_URL,
+            params={"q": text, "langpair": f"{src}|{tgt}"},
+            timeout=8,
+        )
+        data = resp.json()
+        translated = data.get("responseData", {}).get("translatedText", "")
+        if translated and data.get("responseStatus") == 200:
+            result = translated
+        else:
+            result = text
+    except Exception:
+        result = text
+    with _translation_lock:
+        _translation_cache[key] = result
+    return result
+
+
+@app.route("/api/translate", methods=["POST"])
+def api_translate():
+    """
+    Translate a batch of texts from English to French.
+    Body JSON: { "texts": ["text1", "text2", ...] }
+    Returns:   { "translations": ["tr1", "tr2", ...] }
+    Texts that are already cached are returned immediately.
+    """
+    body = request.get_json(force=True, silent=True) or {}
+    texts = body.get("texts", [])
+    if not isinstance(texts, list):
+        return jsonify({"error": "texts must be a list"}), 400
+
+    results = []
+    for t in texts:
+        results.append(_translate_text(str(t)))
+
+    return jsonify({"translations": results})
 
 
 @app.route("/api/status")
