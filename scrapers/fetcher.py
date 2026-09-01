@@ -88,9 +88,6 @@ def _fetch_rss(source: Dict) -> List[Dict[str, Any]]:
             )
             # Remove "Read more" trailing noise
             summary = re.sub(r"\[?read\s+more\.?\]?", "", summary, flags=re.I).strip()
-            # Trim long summaries
-            if len(summary) > 350:
-                summary = summary[:347] + "…"
 
             published = _parse_date(
                 entry.get("published") or entry.get("updated", "")
@@ -170,8 +167,6 @@ def _fetch_html(source: Dict) -> List[Dict[str, Any]]:
                 if summary_el:
                     summary = _clean_text(summary_el.get_text())
                     break
-            if len(summary) > 350:
-                summary = summary[:347] + "…"
 
             # Date (best-effort)
             date_el = node.select_one("time")
