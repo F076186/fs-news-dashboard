@@ -71,10 +71,18 @@ def _background_refresh():
 
 @app.route("/")
 def index():
+    import hashlib
+    def _ver(path):
+        try:
+            return hashlib.md5((BASE_DIR / path).read_bytes()).hexdigest()[:8]
+        except Exception:
+            return "1"
     return render_template(
         "index.html",
         categories=CATEGORIES,
         sources=SOURCES,
+        js_ver_i18n=_ver("static/js/i18n.js"),
+        js_ver_dash=_ver("static/js/dashboard.js"),
     )
 
 

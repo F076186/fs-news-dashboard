@@ -55,7 +55,7 @@
 </header>
 
 <!-- ═══════════════════════ LOADING OVERLAY ══════════════ -->
-<div class="loading-overlay" id="loadingOverlay">
+<div class="loading-overlay hidden" id="loadingOverlay">
   <div class="loading-card">
     <div class="spinner"></div>
     <p class="loading-title" data-i18n="loadingTitle">Fetching Financial Intelligence</p>
@@ -120,20 +120,11 @@
   </div>
 </div>
 
-<script src="/static/js/i18n.js"></script>
 <script>
-// Diagnostic: check i18n loaded correctly before dashboard.js runs
-(function() {
-  var overlay = document.getElementById("loadingOverlay");
-  if (!window.i18n) {
-    // i18n.js failed — hide overlay and show inline error
-    if (overlay) overlay.classList.add("hidden");
-    var msg = document.getElementById("loadingMsg");
-    if (msg) { msg.textContent = "JS init error: i18n module failed to load. Please hard-refresh (Cmd+Shift+R)."; }
-    console.error("window.i18n is undefined after i18n.js loaded");
-  }
-})();
+/* Show overlay immediately — before any external JS loads */
+document.getElementById("loadingOverlay").classList.remove("hidden");
 </script>
-<script src="/static/js/dashboard.js"></script>
+<script src="/static/js/i18n.js?v={{ js_ver_i18n }}"></script>
+<script src="/static/js/dashboard.js?v={{ js_ver_dash }}"></script>
 </body>
 </html>
