@@ -97,7 +97,7 @@ def _detect_themes(articles: List[Dict]) -> List[str]:
 def _theme_bullets(articles: List[Dict], themes: List[str]) -> List[str]:
     """
     Build 3-5 plain-English bullet sentences summarising what is happening.
-    Each bullet is derived from the most-representative article for a theme.
+    Each bullet uses the full summary (not truncated) of the best-matching article.
     """
     bullets: List[str] = []
     used_titles: set = set()
@@ -120,28 +120,24 @@ def _theme_bullets(articles: List[Dict], themes: List[str]) -> List[str]:
             summary = best.get("summary", "").strip()
             title = best["title"].strip()
             src = best.get("source_name", "")
-            if summary and len(summary) > 30:
-                # Use first sentence of summary if it's informative
-                first_sent = re.split(r"(?<=[.!?])\s", summary)[0]
-                if len(first_sent) > 20:
-                    bullets.append(f"**{theme}:** {first_sent} ({src})")
-                else:
-                    bullets.append(f"**{theme}:** {title} ({src})")
-            else:
-                bullets.append(f"**{theme}:** {title} ({src})")
+            # Use the full summary when available, fall back to title
+            body = summary if summary and len(summary) > 30 else title
+            bullets.append(f"**{theme}:** {body} ({src})")
 
     # Pad with generic bullets if fewer than 3
     if len(bullets) < 3 and articles:
         for a in articles:
             if a["title"] not in used_titles and len(bullets) < 3:
                 src = a.get("source_name", "")
-                bullets.append(f"{a['title']} ({src})")
+                summary = a.get("summary", "").strip()
+                body = summary if summary and len(summary) > 30 else a["title"]
+                bullets.append(f"{body} ({src})")
                 used_titles.add(a["title"])
 
     return bullets
 
 
-def _top_headlines(articles: List[Dict], n: int = 3) -> List[Dict]:
+def _top_headlines(articles: List[Dict], n: int = 5) -> List[Dict]:
     seen: set = set()
     result = []
     for a in articles:
@@ -207,7 +203,7 @@ def build_intelligence_brief(all_articles: List[Dict]) -> Dict[str, Any]:
             "count": len(arts),
             "themes": themes,
             "theme_bullets": _theme_bullets(arts, themes),
-            "top_headlines": _top_headlines(arts, 3),
+            "top_headlines": _top_headlines(arts, 5),
             "hot_keywords": _keywords([a["title"] for a in arts], 8),
             "regions_present": sorted(set(a["region"] for a in arts)),
         }
@@ -233,7 +229,7 @@ def build_intelligence_brief(all_articles: List[Dict]) -> Dict[str, Any]:
             "countries": countries,
             "themes": themes,
             "theme_bullets": _theme_bullets(arts, themes),
-            "top_headlines": _top_headlines(arts, 3),
+            "top_headlines": _top_headlines(arts, 5),
             "hot_keywords": _keywords([a["title"] for a in arts], 8),
             "categories_present": sorted(set(a["category"] for a in arts)),
         }
@@ -248,7 +244,7 @@ def build_intelligence_brief(all_articles: List[Dict]) -> Dict[str, Any]:
                 continue
             matrix_out[cat][reg] = {
                 "count": len(arts),
-                "top_headlines": _top_headlines(arts, 2),
+                "top_headlines": _top_headlines(arts, 3),
                 "hot_keywords": _keywords([a["title"] for a in arts], 4),
             }
 
