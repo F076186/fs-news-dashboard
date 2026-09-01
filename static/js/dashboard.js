@@ -1,14 +1,10 @@
-/* ═══════════════════════════════════════════════════════════════════
-   FS Intelligence Dashboard — JavaScript
-   ═══════════════════════════════════════════════════════════════════ */
-
-"use strict";
+/* FS Intelligence Dashboard — JavaScript */
+/* No "use strict" — avoids Safari parse failures on strict-mode edge cases */
 
 // ── Config ─────────────────────────────────────────────────────────────
-const API_URL        = "/api/news";
-const STATUS_URL     = "/api/status";
-const POLL_INTERVAL  = 60_000;   // re-check status every 60 s
-const AUTO_REFRESH_S = 15 * 60;  // cache TTL on server (15 min)
+var API_URL       = "/api/news";
+var STATUS_URL    = "/api/status";
+var POLL_INTERVAL = 60000;
 
 // Category → colour mapping (matches CSS vars)
 const CAT_COLORS = {
@@ -30,11 +26,11 @@ const REGION_COLORS = {
 };
 
 // ── State ───────────────────────────────────────────────────────────────
-let _data          = null;   // raw EN data from server
-let _displayData   = null;   // current display data (EN or FR translated copy)
-let _activeFilter  = "all";
-let _polling       = null;
-let _briefView     = "category";   // "category" | "region" | "matrix"
+var _data        = null;
+var _displayData = null;
+var _activeFilter = "all";
+var _polling     = null;
+var _briefView   = "category";
 
 // ── DOM helpers ─────────────────────────────────────────────────────────
 const $  = (sel) => document.querySelector(sel);
