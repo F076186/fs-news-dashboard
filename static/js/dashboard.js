@@ -12,17 +12,28 @@ const AUTO_REFRESH_S = 15 * 60;  // cache TTL on server (15 min)
 
 // Category → colour mapping (matches CSS vars)
 const CAT_COLORS = {
-  "Banking News":        "#2f81f7",
-  "Insurance":           "#3fb950",
-  "FinTech & Innovation":"#a371f7",
+  "Banking News":         "#2f81f7",
+  "Insurance":            "#3fb950",
+  "FinTech & Innovation": "#a371f7",
   "Strategy & Consulting":"#d29922",
-  "Regulation":          "#f85149",
+  "Regulation":           "#f85149",
+};
+
+// Region → colour mapping
+const REGION_COLORS = {
+  "Global":                "#39d3bb",
+  "North America":         "#2f81f7",
+  "Europe":                "#a371f7",
+  "Asia-Pacific":          "#f0883e",
+  "Middle East & Africa":  "#d29922",
+  "Latin America":         "#3fb950",
 };
 
 // ── State ───────────────────────────────────────────────────────────────
 let _data          = null;
 let _activeFilter  = "all";
 let _polling       = null;
+let _briefView     = "category";   // "category" | "region" | "matrix"
 
 // ── DOM helpers ─────────────────────────────────────────────────────────
 const $  = (sel) => document.querySelector(sel);
@@ -136,6 +147,7 @@ async function loadNews(force = false) {
 function render() {
   if (!_data) return;
   renderStats();
+  renderIntelBrief();
   renderCategories();
   updateErrorBanner();
 }
@@ -285,6 +297,181 @@ function openModal(article, catColor) {
 }
 
 // ── Error banner ────────────────────────────────────────────────────────
+// ── Intelligence Brief ──────────────────────────────────────────────────
+
+function renderIntelBrief() {
+  const brief = (_data || {}).intelligence_brief;
+  const section = $("#intelBrief");
+  if (!brief) { section.classList.add("hidden"); return; }
+  section.classList.remove("hidden");
+  _renderBriefView(_briefView);
+}
+
+function _renderBriefView(view) {
+  _briefView = view;
+  const brief = (_data || {}).intelligence_brief;
+  if (!brief) return;
+
+  // Sync tab active state
+  $$(".intel-tab").forEach(t => {
+    t.classList.toggle("active", t.dataset.view === view);
+  });
+
+  const body = $("#intelBody");
+  if (view === "category")  { body.innerHTML = _buildByCategoryHTML(brief); }
+  else if (view === "region") { body.innerHTML = _buildByRegionHTML(brief); }
+  else                       { body.innerHTML = _buildMatrixHTML(brief); }
+}
+
+// ── By-Category HTML ────────────────────────────────────────────────────
+function _buildByCategoryHTML(brief) {
+  const cats = Object.keys(brief.by_category);
+  if (!cats.length) return `<p style="color:var(--text-dim)">No data yet.</p>`;
+
+  const cards = cats.map(cat => {
+    const d     = brief.by_category[cat];
+    const color = CAT_COLORS[cat] || "#8b949e";
+
+    const themeHtml = (d.themes || []).map(t =>
+      `<span class="brief-theme-tag">${escHtml(t)}</span>`
+    ).join("");
+
+    const bulletHtml = (d.theme_bullets || []).map(b => {
+      // bold the **text** markers
+      const formatted = escHtml(b).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+      return `<li>${formatted}</li>`;
+    }).join("");
+
+    const hlHtml = (d.top_headlines || []).map(h =>
+      `<a class="brief-headline-link" href="${escHtml(h.url)}" target="_blank" rel="noopener"
+         title="${escHtml(h.source)}">${escHtml(h.title)}</a>`
+    ).join("");
+
+    const regionChips = (d.regions_present || []).map(r =>
+      `<span class="brief-region-chip">${escHtml(r)}</span>`
+    ).join("");
+
+    return `
+      <div class="brief-cat-card" style="--cat-color:${color}">
+        <div class="brief-cat-card-title">
+          ${escHtml(cat)}
+          <span class="brief-count-badge">${d.count} articles</span>
+        </div>
+        <div class="brief-themes">${themeHtml}</div>
+        <ul class="brief-bullets">${bulletHtml}</ul>
+        <div class="brief-headlines">${hlHtml}</div>
+        <div class="brief-region-row">${regionChips}</div>
+      </div>`;
+  }).join("");
+
+  return `<div class="brief-cat-grid">${cards}</div>`;
+}
+
+// ── By-Region HTML ──────────────────────────────────────────────────────
+function _buildByRegionHTML(brief) {
+  const regions = brief.regions || Object.keys(brief.by_region);
+  if (!regions.length) return `<p style="color:var(--text-dim)">No data yet.</p>`;
+
+  const cards = regions.map(reg => {
+    const d     = brief.by_region[reg];
+    if (!d) return "";
+    const color = REGION_COLORS[reg] || "#39d3bb";
+
+    const themeHtml = (d.themes || []).map(t =>
+      `<span class="brief-theme-tag">${escHtml(t)}</span>`
+    ).join("");
+
+    const bulletHtml = (d.theme_bullets || []).map(b => {
+      const formatted = escHtml(b).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+      return `<li>${formatted}</li>`;
+    }).join("");
+
+    const hlHtml = (d.top_headlines || []).map(h =>
+      `<a class="brief-headline-link" href="${escHtml(h.url)}" target="_blank" rel="noopener"
+         title="${escHtml(h.source)}">${escHtml(h.title)}</a>`
+    ).join("");
+
+    const catChips = (d.categories_present || []).map(c =>
+      `<span class="brief-region-chip" style="color:${CAT_COLORS[c]||'#8b949e'}">${escHtml(c)}</span>`
+    ).join("");
+
+    const countries = (d.countries || []).join(" · ");
+
+    return `
+      <div class="brief-region-card" style="--region-color:${color}">
+        <div class="brief-region-card-title">
+          ${escHtml(reg)}
+          <span class="brief-count-badge">${d.count} articles</span>
+        </div>
+        ${countries ? `<div class="brief-countries">${escHtml(countries)}</div>` : ""}
+        <div class="brief-themes">${themeHtml}</div>
+        <ul class="brief-bullets">${bulletHtml}</ul>
+        <div class="brief-headlines">${hlHtml}</div>
+        <div class="brief-region-row">${catChips}</div>
+      </div>`;
+  }).join("");
+
+  return `<div class="brief-region-grid">${cards}</div>`;
+}
+
+// ── Matrix HTML ─────────────────────────────────────────────────────────
+function _buildMatrixHTML(brief) {
+  const cats    = Object.keys(brief.by_category);
+  const regions = brief.regions || Object.keys(brief.by_region);
+  if (!cats.length || !regions.length) return `<p style="color:var(--text-dim)">No data yet.</p>`;
+
+  const thead = `<tr>
+    <th class="cat-header">Category \\ Region</th>
+    ${regions.map(r => `<th style="color:${REGION_COLORS[r]||'#39d3bb'}">${escHtml(r)}</th>`).join("")}
+  </tr>`;
+
+  const rows = cats.map(cat => {
+    const catColor = CAT_COLORS[cat] || "#8b949e";
+    const cells = regions.map(reg => {
+      const cell = (brief.matrix[cat] || {})[reg];
+      if (!cell) return `<td><span class="matrix-cell-empty">—</span></td>`;
+
+      const kws = (cell.hot_keywords || []).map(k =>
+        `<span class="matrix-kw">${escHtml(k)}</span>`
+      ).join("");
+
+      const headlines = (cell.top_headlines || []).map(h =>
+        `<a class="matrix-headline" href="${escHtml(h.url)}" target="_blank" rel="noopener">${escHtml(h.title)}</a>`
+      ).join("");
+
+      return `<td>
+        <div class="matrix-cell-count">${cell.count}</div>
+        ${headlines}
+        <div class="matrix-cell-kws">${kws}</div>
+      </td>`;
+    }).join("");
+
+    return `<tr>
+      <th style="color:${catColor}">${escHtml(cat)}</th>
+      ${cells}
+    </tr>`;
+  }).join("");
+
+  return `<div class="brief-matrix-wrap">
+    <table class="brief-matrix">
+      <thead>${thead}</thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+}
+
+// ── Intel Brief tab handler ─────────────────────────────────────────────
+function initIntelBriefTabs() {
+  const tabs = $("#intelTabs");
+  if (!tabs) return;
+  tabs.addEventListener("click", (e) => {
+    const tab = e.target.closest(".intel-tab");
+    if (!tab) return;
+    _renderBriefView(tab.dataset.view);
+  });
+}
+
+// ── Error banner ────────────────────────────────────────────────────────
 function showErrorBanner(msg) {
   const el = $("#errorBanner");
   el.classList.remove("hidden");
@@ -387,6 +574,7 @@ function initEventHandlers() {
 // ── Boot ────────────────────────────────────────────────────────────────
 (function init() {
   initCategoryFilter();
+  initIntelBriefTabs();
   initEventHandlers();
   loadNews(false);
   startPolling();

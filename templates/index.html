@@ -66,6 +66,23 @@
   <!-- Stats Bar -->
   <section class="stats-bar" id="statsBar"></section>
 
+  <!-- ── Intelligence Brief ───────────────────────────── -->
+  <section class="intel-brief hidden" id="intelBrief">
+    <div class="intel-brief-header">
+      <div class="intel-brief-title-row">
+        <span class="intel-brief-icon">⚡</span>
+        <h2 class="intel-brief-title">Intelligence Brief</h2>
+        <span class="intel-brief-sub">Structured digest · by category &amp; region</span>
+      </div>
+      <div class="intel-brief-tabs" id="intelTabs">
+        <button class="intel-tab active" data-view="category">By Category</button>
+        <button class="intel-tab" data-view="region">By Region</button>
+        <button class="intel-tab" data-view="matrix">Category × Region</button>
+      </div>
+    </div>
+    <div class="intel-brief-body" id="intelBody"></div>
+  </section>
+
   <!-- Category Sections (injected by JS) -->
   <div id="categorySections"></div>
 

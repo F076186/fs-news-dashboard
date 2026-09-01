@@ -227,6 +227,278 @@ a:hover { text-decoration: underline; }
   padding: 24px;
 }
 
+/* ── Intelligence Brief ────────────────────────────────────────────────── */
+.intel-brief {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  margin-bottom: 32px;
+  overflow: hidden;
+  animation: fadeIn .4s ease both;
+}
+.intel-brief.hidden { display: none; }
+
+.intel-brief-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(90deg, rgba(47,129,247,.06) 0%, rgba(163,113,247,.06) 100%);
+}
+.intel-brief-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.intel-brief-icon { font-size: 20px; }
+.intel-brief-title {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -.2px;
+  background: linear-gradient(90deg, #2f81f7, #a371f7);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.intel-brief-sub {
+  font-size: 11.5px;
+  color: var(--text-dim);
+  margin-left: 4px;
+}
+
+/* Tab bar */
+.intel-brief-tabs {
+  display: flex;
+  gap: 6px;
+}
+.intel-tab {
+  padding: 5px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .15s;
+}
+.intel-tab:hover  { border-color: var(--text-dim); color: var(--text); }
+.intel-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* Brief body */
+.intel-brief-body {
+  padding: 20px 22px;
+}
+
+/* ── By-Category view ──────────────────────────────────────────────────── */
+.brief-cat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 16px;
+}
+.brief-cat-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  border-top: 3px solid var(--cat-color, var(--accent));
+}
+.brief-cat-card-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--cat-color, var(--accent));
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.brief-count-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(255,255,255,.07);
+  color: var(--text-muted);
+}
+.brief-themes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+.brief-theme-tag {
+  font-size: 10.5px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(47,129,247,.12);
+  border: 1px solid rgba(47,129,247,.2);
+  color: #7eb8f7;
+}
+.brief-bullets {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 10px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.brief-bullets li {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  line-height: 1.55;
+  padding-left: 14px;
+  position: relative;
+}
+.brief-bullets li::before {
+  content: "›";
+  position: absolute;
+  left: 0;
+  color: var(--cat-color, var(--accent));
+  font-weight: 700;
+}
+.brief-bullets li strong {
+  color: var(--text);
+  font-weight: 600;
+}
+.brief-headlines {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  border-top: 1px solid var(--border-light);
+  padding-top: 8px;
+  margin-top: 4px;
+}
+.brief-headline-link {
+  font-size: 11.5px;
+  color: var(--accent);
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.brief-headline-link:hover { text-decoration: underline; }
+.brief-region-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+}
+.brief-region-chip {
+  font-size: 10px;
+  padding: 1px 7px;
+  border-radius: 8px;
+  background: rgba(255,255,255,.05);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+}
+
+/* ── By-Region view ────────────────────────────────────────────────────── */
+.brief-region-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 16px;
+}
+.brief-region-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  border-left: 4px solid var(--region-color, var(--teal));
+}
+.brief-region-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--region-color, var(--teal));
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.brief-countries {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-bottom: 10px;
+}
+
+/* ── Matrix view ───────────────────────────────────────────────────────── */
+.brief-matrix-wrap {
+  overflow-x: auto;
+}
+.brief-matrix {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 12.5px;
+}
+.brief-matrix th, .brief-matrix td {
+  border: 1px solid var(--border);
+  padding: 10px 12px;
+  vertical-align: top;
+  text-align: left;
+}
+.brief-matrix th {
+  background: var(--surface2);
+  font-weight: 700;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.brief-matrix th.cat-header { color: var(--accent); }
+.brief-matrix td { background: var(--bg); }
+.brief-matrix td:hover { background: var(--surface2); }
+.matrix-cell-empty { color: var(--text-dim); font-size: 11px; }
+.matrix-cell-count {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--accent);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.matrix-cell-kws {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 4px;
+}
+.matrix-kw {
+  font-size: 9.5px;
+  padding: 1px 5px;
+  border-radius: 6px;
+  background: rgba(47,129,247,.1);
+  color: #7eb8f7;
+}
+.matrix-headline {
+  font-size: 11px;
+  color: var(--text-muted);
+  display: block;
+  margin-bottom: 2px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* Print additions for brief */
+@media print {
+  .intel-brief-tabs { display: none !important; }
+  .intel-brief {
+    border: 1px solid #30363d !important;
+    background: #161b22 !important;
+    page-break-inside: avoid;
+  }
+  .brief-cat-card, .brief-region-card {
+    background: #1c2128 !important;
+    border: 1px solid #30363d !important;
+    page-break-inside: avoid;
+  }
+  .brief-matrix { font-size: 9pt !important; }
+  .brief-matrix th, .brief-matrix td { padding: 6px 8px !important; }
+}
+
 /* ── Stats Bar ─────────────────────────────────────────────────────────── */
 .stats-bar {
   display: flex;

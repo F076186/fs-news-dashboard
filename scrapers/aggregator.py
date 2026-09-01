@@ -8,6 +8,7 @@ from typing import Dict, List, Any
 
 from scrapers.fetcher import fetch_source
 from scrapers.sources import SOURCES, CATEGORIES
+from scrapers.brief import build_intelligence_brief
 
 logger = logging.getLogger(__name__)
 
@@ -113,6 +114,9 @@ def aggregate_all() -> Dict[str, Any]:
     total_ok = sum(1 for r in all_results if r["status"] == "ok")
     total_err = sum(1 for r in all_results if r["status"] == "error")
 
+    # Intelligence brief (category × region structured digest)
+    intelligence_brief = build_intelligence_brief(all_articles)
+
     return {
         "fetched_at": datetime.now(timezone.utc).isoformat(),
         "total_sources": len(SOURCES),
@@ -123,4 +127,5 @@ def aggregate_all() -> Dict[str, Any]:
         "category_summaries": category_summaries,
         "all_articles": all_articles,
         "source_results": all_results,
+        "intelligence_brief": intelligence_brief,
     }
