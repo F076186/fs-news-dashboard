@@ -3,23 +3,161 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>FS Intelligence Dashboard — Financial Services News</title>
-<link rel="stylesheet" href="/static/css/dashboard.css"/>
+<title>FS Intelligence Dashboard</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2128;--border:#30363d;--border-light:#21262d;--text:#e6edf3;--text-muted:#8b949e;--text-dim:#4d5566;--accent:#2f81f7;--green:#3fb950;--red:#f85149;--orange:#d29922;--purple:#a371f7;--teal:#39d3bb;--radius:10px;--radius-sm:6px;--shadow:0 4px 16px rgba(0,0,0,.45);--font:-apple-system,"Segoe UI",system-ui,Helvetica,Arial,sans-serif}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.6;min-height:100vh}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.app-header{position:sticky;top:0;z-index:100;background:rgba(13,17,23,.96);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
+.header-inner{max-width:1440px;margin:0 auto;padding:14px 24px 10px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.header-brand{display:flex;align-items:center;gap:14px}
+.brand-icon{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,#2f81f7 0%,#a371f7 100%);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;color:#fff;flex-shrink:0}
+.brand-text h1{font-size:18px;font-weight:700;color:var(--text)}
+.brand-text p{font-size:12px;color:var(--text-muted)}
+.header-controls{display:flex;align-items:center;gap:12px;flex-shrink:0}
+.status-pill{font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:20px;background:var(--border);color:var(--text-muted)}
+.status-pill.ok{background:rgba(63,185,80,.18);color:var(--green)}
+.status-pill.err{background:rgba(248,81,73,.18);color:var(--red)}
+.status-pill.loading{background:rgba(47,129,247,.18);color:var(--accent)}
+.btn-refresh,.btn-pdf,.btn-lang{display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;cursor:pointer;transition:background .15s}
+.btn-refresh{background:var(--surface2);border:1px solid var(--border);color:var(--text)}
+.btn-refresh:hover{background:var(--border)}
+.btn-refresh:disabled{opacity:.5;cursor:not-allowed}
+.btn-pdf{background:rgba(163,113,247,.15);border:1px solid rgba(163,113,247,.4);color:#a371f7}
+.btn-pdf:hover{background:rgba(163,113,247,.28)}
+.btn-lang{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-weight:600;white-space:nowrap}
+.btn-lang:hover{background:var(--border)}
+.lang-flag{font-size:15px;line-height:1}
+.lang-label{font-size:12px;font-weight:700;letter-spacing:.5px}
+.last-updated{font-size:11px;color:var(--text-dim);white-space:nowrap}
+.cat-bar{max-width:1440px;margin:0 auto;padding:8px 24px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.cat-bar::-webkit-scrollbar{display:none}
+.cat-btn{padding:4px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text-muted);font-size:12.5px;cursor:pointer;white-space:nowrap;transition:all .15s}
+.cat-btn:hover{border-color:var(--text-dim);color:var(--text)}
+.cat-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.loading-overlay{position:fixed;inset:0;z-index:200;background:rgba(13,17,23,.95);display:flex;align-items:center;justify-content:center}
+.loading-overlay.hidden{display:none}
+.loading-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px 48px;text-align:center;max-width:480px;width:90%}
+.spinner{width:44px;height:44px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 20px}
+.loading-title{font-size:17px;font-weight:700;margin-bottom:8px}
+.loading-sub{font-size:13px;color:var(--text-muted)}
+.source-progress{margin-top:20px;display:flex;flex-wrap:wrap;gap:5px;justify-content:center}
+.sp-dot{width:8px;height:8px;border-radius:50%;background:var(--border);transition:background .3s}
+.sp-dot.ok{background:var(--green)}
+.sp-dot.err{background:var(--red)}
+.main-content{max-width:1440px;margin:0 auto;padding:24px}
+.intel-brief{background:var(--surface);border:1px solid var(--border);border-radius:14px;margin-bottom:32px;overflow:hidden}
+.intel-brief.hidden{display:none}
+.intel-brief-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:18px 22px 14px;border-bottom:1px solid var(--border);background:linear-gradient(90deg,rgba(47,129,247,.06),rgba(163,113,247,.06))}
+.intel-brief-title-row{display:flex;align-items:center;gap:10px}
+.intel-brief-title{font-size:17px;font-weight:800;background:linear-gradient(90deg,#2f81f7,#a371f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.intel-brief-sub{font-size:11.5px;color:var(--text-dim);margin-left:4px}
+.intel-brief-tabs{display:flex;gap:6px}
+.intel-tab{padding:5px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text-muted);font-size:12.5px;cursor:pointer;transition:all .15s}
+.intel-tab:hover{border-color:var(--text-dim);color:var(--text)}
+.intel-tab.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.intel-brief-body{padding:20px 22px}
+.brief-cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px}
+.brief-cat-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;border-top:3px solid var(--cat-color,var(--accent))}
+.brief-cat-card-title{font-size:13.5px;font-weight:700;color:var(--cat-color,var(--accent));margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+.brief-count-badge{font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;background:rgba(255,255,255,.07);color:var(--text-muted)}
+.brief-themes{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px}
+.brief-theme-tag{font-size:10.5px;padding:2px 8px;border-radius:10px;background:rgba(47,129,247,.12);border:1px solid rgba(47,129,247,.2);color:#7eb8f7}
+.brief-bullets{list-style:none;padding:0;margin:0 0 10px;display:flex;flex-direction:column;gap:6px}
+.brief-bullets li{font-size:12.5px;color:var(--text-muted);line-height:1.55;padding-left:14px;position:relative}
+.brief-bullets li::before{content:"›";position:absolute;left:0;color:var(--cat-color,var(--accent));font-weight:700}
+.brief-bullets li strong{color:var(--text);font-weight:600}
+.brief-headlines{display:flex;flex-direction:column;gap:5px;border-top:1px solid var(--border-light);padding-top:8px;margin-top:4px}
+.brief-headline-link{font-size:11.5px;color:var(--accent);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brief-region-row{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.brief-region-chip{font-size:10px;padding:1px 7px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--text-dim)}
+.brief-region-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:16px}
+.brief-region-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;border-left:4px solid var(--region-color,var(--teal))}
+.brief-region-card-title{font-size:14px;font-weight:700;color:var(--region-color,var(--teal));margin-bottom:4px;display:flex;align-items:center;justify-content:space-between}
+.brief-countries{font-size:11px;color:var(--text-dim);margin-bottom:10px}
+.brief-matrix-wrap{overflow-x:auto}
+.brief-matrix{border-collapse:collapse;width:100%;font-size:12.5px}
+.brief-matrix th,.brief-matrix td{border:1px solid var(--border);padding:10px 12px;vertical-align:top;text-align:left}
+.brief-matrix th{background:var(--surface2);font-weight:700;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-muted);white-space:nowrap}
+.brief-matrix th.cat-header{color:var(--accent)}
+.brief-matrix td{background:var(--bg)}
+.matrix-cell-empty{color:var(--text-dim);font-size:11px}
+.matrix-cell-count{font-size:18px;font-weight:800;color:var(--accent);line-height:1;margin-bottom:4px}
+.matrix-kw{font-size:9.5px;padding:1px 5px;border-radius:6px;background:rgba(47,129,247,.1);color:#7eb8f7}
+.matrix-headline{font-size:11px;color:var(--text-muted);display:block;margin-bottom:2px}
+.stats-bar{display:flex;gap:14px;margin-bottom:28px;flex-wrap:wrap}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;flex:1;min-width:140px;display:flex;flex-direction:column;gap:4px}
+.stat-label{font-size:11.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px}
+.stat-value{font-size:26px;font-weight:800;line-height:1}
+.stat-value.green{color:var(--green)}.stat-value.accent{color:var(--accent)}.stat-value.orange{color:var(--orange)}.stat-value.red{color:var(--red)}
+.stat-sub{font-size:11.5px;color:var(--text-dim)}
+.category-section{margin-bottom:40px;animation:fadeIn .35s ease both}
+.cat-section-header{display:flex;align-items:center;gap:12px;margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--border-light)}
+.cat-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.cat-section-title{font-size:17px;font-weight:700}
+.cat-count{font-size:12px;font-weight:600;padding:2px 9px;border-radius:12px;background:var(--surface2);color:var(--text-muted)}
+.cat-keywords{display:flex;flex-wrap:wrap;gap:6px;margin-left:auto}
+.kw-tag{font-size:11px;padding:2px 8px;border-radius:10px;border:1px solid var(--border);color:var(--text-muted)}
+.articles-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.article-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;cursor:pointer;transition:border-color .2s,transform .15s;display:flex;flex-direction:column;gap:8px;position:relative;overflow:hidden}
+.article-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--cat-color,var(--accent));opacity:0;transition:opacity .2s}
+.article-card:hover{border-color:var(--text-dim);transform:translateY(-2px)}
+.article-card:hover::before{opacity:1}
+.card-source-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.card-source-tag{font-size:10.5px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:var(--cat-color,var(--accent))}
+.card-date{font-size:10.5px;color:var(--text-dim)}
+.card-method-badge{font-size:9px;padding:1px 5px;border-radius:4px;background:var(--surface2);color:var(--text-dim);border:1px solid var(--border-light)}
+.card-title{font-size:13.5px;font-weight:600;line-height:1.45;color:var(--text);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.card-summary{font-size:12.5px;color:var(--text-muted);line-height:1.55;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;flex:1}
+.card-footer{display:flex;align-items:center;justify-content:flex-end;margin-top:4px}
+.card-read-link{font-size:11px;color:var(--accent);font-weight:500;opacity:.7;transition:opacity .15s}
+.article-card:hover .card-read-link{opacity:1}
+.source-status-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;margin-bottom:24px}
+.source-badge{display:flex;align-items:center;gap:5px;font-size:11.5px;padding:4px 10px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted)}
+.source-badge.ok{border-color:rgba(63,185,80,.3);color:var(--green)}
+.source-badge.err{border-color:rgba(248,81,73,.3);color:var(--red)}
+.source-badge .dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
+.source-badge .cnt{font-weight:700}
+.error-banner{background:rgba(248,81,73,.12);border:1px solid rgba(248,81,73,.3);border-radius:var(--radius);padding:12px 18px;font-size:13px;color:var(--red);margin-top:16px}
+.error-banner.hidden{display:none}
+.modal-overlay{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:24px}
+.modal-overlay.hidden{display:none}
+.modal-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;max-width:680px;width:100%;max-height:80vh;overflow-y:auto}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.modal-source-tag{font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--accent)}
+.modal-close{width:28px;height:28px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);color:var(--text-muted);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center}
+.modal-close:hover{background:var(--border)}
+.modal-title{font-size:18px;font-weight:700;line-height:1.4;margin-bottom:10px}
+.modal-meta{font-size:12px;color:var(--text-dim);margin-bottom:16px}
+.modal-summary{font-size:14px;color:var(--text-muted);line-height:1.7;margin-bottom:22px}
+.modal-cta{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;background:var(--accent);color:#fff;border-radius:var(--radius-sm);font-size:13.5px;font-weight:600}
+.modal-cta:hover{opacity:.85;text-decoration:none}
+.translating-overlay{position:fixed;inset:0;z-index:150;background:rgba(13,17,23,.7);display:flex;align-items:center;justify-content:center}
+.translating-overlay.hidden{display:none}
+.translating-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px 36px;text-align:center}
+.translating-card .spinner{width:32px;height:32px;margin:0 auto 14px}
+.translating-card p{font-size:14px;color:var(--text-muted)}
+.empty-state{grid-column:1/-1;text-align:center;padding:36px;color:var(--text-dim);font-size:13px}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media(max-width:768px){.header-inner{flex-wrap:wrap}.header-controls{flex-wrap:wrap}.articles-grid{grid-template-columns:1fr}.main-content{padding:14px}}
+</style>
 </head>
 <body>
 
-<!-- ═══════════════════════ HEADER ═══════════════════════ -->
 <header class="app-header">
   <div class="header-inner">
     <div class="header-brand">
       <div class="brand-icon">FS</div>
       <div class="brand-text">
         <h1>Financial Services Intelligence</h1>
-        <p>Live aggregation of News · Trends · Regulations · Innovation · Strategy</p>
+        <p>Live aggregation of News &middot; Trends &middot; Regulations &middot; Innovation &middot; Strategy</p>
       </div>
     </div>
     <div class="header-controls">
-      <span class="status-pill" id="statusPill">Loading…</span>
+      <span class="status-pill loading" id="statusPill">Loading&hellip;</span>
       <button class="btn-refresh" id="btnRefresh" title="Force re-fetch all sources">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2">
           <path d="M23 4v6h-6M1 20v-6h6"/>
@@ -27,104 +165,443 @@
         </svg>
         Refresh
       </button>
-      <button class="btn-pdf" id="btnPdf" title="Save dashboard as PDF">
+      <button class="btn-pdf" id="btnPdf" title="Save as PDF">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-          <polyline points="14 2 14 8 20 8"/>
-          <line x1="16" y1="13" x2="8" y2="13"/>
-          <line x1="16" y1="17" x2="8" y2="17"/>
-          <polyline points="10 9 9 9 8 9"/>
+          <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
         </svg>
-        <span data-i18n="savePdf">Save PDF</span>
+        Save PDF
       </button>
-      <button class="btn-lang" id="btnLang" title="Switch language / Changer de langue">
-        <span class="lang-flag">🇬🇧</span>
+      <button class="btn-lang" id="btnLang" title="Switch language">
+        <span class="lang-flag">&#127468;&#127463;</span>
         <span class="lang-label" id="langLabel">FR</span>
       </button>
-      <div class="last-updated" id="lastUpdated">–</div>
+      <div class="last-updated" id="lastUpdated"></div>
     </div>
   </div>
-
-  <!-- Category Filter Bar -->
   <nav class="cat-bar" id="catBar">
-    <button class="cat-btn active" data-cat="all" data-i18n="all">All</button>
+    <button class="cat-btn active" data-cat="all">All</button>
     {% for cat in categories %}
     <button class="cat-btn" data-cat="{{ cat }}">{{ cat }}</button>
     {% endfor %}
   </nav>
 </header>
 
-<!-- ═══════════════════════ LOADING OVERLAY ══════════════ -->
-<div class="loading-overlay hidden" id="loadingOverlay">
+<div class="loading-overlay" id="loadingOverlay">
   <div class="loading-card">
     <div class="spinner"></div>
-    <p class="loading-title" data-i18n="loadingTitle">Fetching Financial Intelligence</p>
-    <p class="loading-sub" id="loadingMsg" data-i18n="loadingMsg">Connecting to 18 sources across Banking, Insurance, FinTech &amp; Regulatory bodies…</p>
+    <p class="loading-title">Fetching Financial Intelligence</p>
+    <p class="loading-sub" id="loadingMsg">Connecting to 18 sources&hellip;</p>
     <div class="source-progress" id="sourceProgress"></div>
   </div>
 </div>
 
-<!-- ═══════════════════════ MAIN ══════════════════════════ -->
 <main class="main-content" id="mainContent">
-
-  <!-- Stats Bar -->
   <section class="stats-bar" id="statsBar"></section>
-
-  <!-- ── Intelligence Brief ───────────────────────────── -->
   <section class="intel-brief hidden" id="intelBrief">
     <div class="intel-brief-header">
       <div class="intel-brief-title-row">
-        <span class="intel-brief-icon">⚡</span>
-        <h2 class="intel-brief-title" data-i18n="briefTitle">Intelligence Brief</h2>
-        <span class="intel-brief-sub" data-i18n="briefSub">Structured digest · by category &amp; region</span>
+        <span style="font-size:20px">&#9889;</span>
+        <h2 class="intel-brief-title">Intelligence Brief</h2>
+        <span class="intel-brief-sub">Structured digest &middot; by category &amp; region</span>
       </div>
       <div class="intel-brief-tabs" id="intelTabs">
-        <button class="intel-tab active" data-view="category" data-i18n="tabCategory">By Category</button>
-        <button class="intel-tab" data-view="region" data-i18n="tabRegion">By Region</button>
-        <button class="intel-tab" data-view="matrix" data-i18n="tabMatrix">Category × Region</button>
+        <button class="intel-tab active" data-view="category">By Category</button>
+        <button class="intel-tab" data-view="region">By Region</button>
+        <button class="intel-tab" data-view="matrix">Category &times; Region</button>
       </div>
     </div>
     <div class="intel-brief-body" id="intelBody"></div>
   </section>
-
-  <!-- Category Sections (injected by JS) -->
   <div id="categorySections"></div>
-
-  <!-- Error Banner -->
   <div class="error-banner hidden" id="errorBanner">
-    <strong data-i18n="errorSources">⚠ Some sources failed to load.</strong>
+    <strong>&#9888; Some sources failed to load.</strong>
     <span id="errorDetail"></span>
   </div>
-
 </main>
 
-<!-- ═══════════════════════ ARTICLE MODAL ════════════════ -->
 <div class="modal-overlay hidden" id="modalOverlay">
   <div class="modal-card">
     <div class="modal-header">
       <span class="modal-source-tag" id="modalSource"></span>
-      <button class="modal-close" id="modalClose">✕</button>
+      <button class="modal-close" id="modalClose">&#10005;</button>
     </div>
     <h2 class="modal-title" id="modalTitle"></h2>
     <p class="modal-meta" id="modalMeta"></p>
     <p class="modal-summary" id="modalSummary"></p>
-    <a class="modal-cta" id="modalLink" target="_blank" rel="noopener" data-i18n="readFull">Read full article →</a>
+    <a class="modal-cta" id="modalLink" target="_blank" rel="noopener">Read full article &#8594;</a>
   </div>
 </div>
 
-<!-- ══════════════ TRANSLATING OVERLAY ══════════════ -->
 <div class="translating-overlay hidden" id="translatingOverlay">
   <div class="translating-card">
     <div class="spinner"></div>
-    <p id="translatingMsg">Translating to French…</p>
+    <p id="translatingMsg">Translating to French&hellip;</p>
   </div>
 </div>
 
 <script>
-/* Show overlay immediately — before any external JS loads */
-document.getElementById("loadingOverlay").classList.remove("hidden");
+(function() {
+  // ── i18n ──────────────────────────────────────────────────────
+  var _lang = "en";
+  var _txCache = {};
+
+  function t(key) {
+    var s = { savePdf:"Save PDF",refresh:"Refresh",statusLoading:"Loading...",statusFailed:"Load failed",all:"All",statArticles:"Total Articles",statArticlesSub:"across all sources",statActive:"Sources Active",statFailed:"Sources Failed",statFailedOk:"all sources responding",statFailedErr:"check network",statCats:"Categories",statCatsSub:"industry segments covered",statRefresh:"Refresh Cadence",statRefreshSub:"auto-refresh · RSS+HTML",briefTitle:"Intelligence Brief",briefSub:"by category & region",tabCategory:"By Category",tabRegion:"By Region",tabMatrix:"Category × Region",articles:"articles",readArticle:"Read article →",rss:"RSS",web:"Web",viaRss:"via RSS",viaWeb:"via web",readFull:"Read full article →",noSummary:"No summary available.",errorLoad:"Failed to load news: ",noData:"No data yet." };
+    return s[key] !== undefined ? s[key] : key;
+  }
+  function isFrench() { return _lang === "fr"; }
+  function getLang()  { return _lang; }
+
+  // ── State ─────────────────────────────────────────────────────
+  var _data = null;
+  var _displayData = null;
+  var _activeFilter = "all";
+  var _polling = null;
+  var _briefView = "category";
+
+  var CAT_COLORS = {"Banking News":"#2f81f7","Insurance":"#3fb950","FinTech & Innovation":"#a371f7","Strategy & Consulting":"#d29922","Regulation":"#f85149"};
+  var REGION_COLORS = {"Global":"#39d3bb","North America":"#2f81f7","Europe":"#a371f7","Asia-Pacific":"#f0883e","Middle East & Africa":"#d29922","Latin America":"#3fb950"};
+
+  // ── DOM helpers ───────────────────────────────────────────────
+  function $(sel) { return document.querySelector(sel); }
+  function $$(sel) { return document.querySelectorAll(sel); }
+  function byId(id) { return document.getElementById(id); }
+
+  function showOverlay() { var e=byId("loadingOverlay"); if(e) e.classList.remove("hidden"); }
+  function hideOverlay() { var e=byId("loadingOverlay"); if(e) e.classList.add("hidden"); }
+  function showModal()   { var e=byId("modalOverlay");   if(e) e.classList.remove("hidden"); }
+  function hideModal()   { var e=byId("modalOverlay");   if(e) e.classList.add("hidden"); }
+
+  function setStatusPill(text, cls) {
+    var el = byId("statusPill");
+    if (!el) return;
+    el.textContent = text;
+    el.className = "status-pill" + (cls ? " " + cls : "");
+  }
+  function setRefreshBtn(loading) {
+    var btn = byId("btnRefresh");
+    if (!btn) return;
+    btn.disabled = loading;
+  }
+
+  function escHtml(s) {
+    return String(s || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+  function fmtDate(iso) {
+    if (!iso) return "";
+    try {
+      var d = new Date(iso), now = new Date();
+      var diffH = (now - d) / 3600000;
+      if (diffH < 1) return Math.round(diffH*60) + "m ago";
+      if (diffH < 24) return Math.round(diffH) + "h ago";
+      return d.toLocaleDateString("en-GB", {day:"numeric",month:"short"});
+    } catch(e) { return iso; }
+  }
+
+  // ── Source dots ───────────────────────────────────────────────
+  function initSourceDots() {
+    var c = byId("sourceProgress");
+    if (!c) return;
+    c.innerHTML = "";
+    for (var i=0; i<18; i++) {
+      var d = document.createElement("div");
+      d.className = "sp-dot";
+      d.id = "sp-" + i;
+      c.appendChild(d);
+    }
+  }
+  function tickDot(idx, status) {
+    var d = byId("sp-" + idx);
+    if (d) d.classList.add(status === "ok" ? "ok" : "err");
+  }
+
+  // ── Load news ─────────────────────────────────────────────────
+  function loadNews(force) {
+    showOverlay();
+    setStatusPill(t("statusLoading"), "loading");
+    setRefreshBtn(true);
+    initSourceDots();
+
+    var url = force ? "/api/news?refresh=1" : "/api/news";
+    var dotIdx = 0;
+    var dotTimer = setInterval(function() {
+      if (dotIdx < 18) tickDot(dotIdx++, "ok");
+    }, 1200);
+
+    var msgs = ["Connecting to 18 sources…","Fetching Banking & Insurance…","Scanning FinTech feeds…","Reading McKinsey, BCG, Bain…","Checking EBA, EIOPA, ECB…","Building Intelligence Brief…","Almost ready…"];
+    var msgIdx = 0;
+    var loadingMsgEl = byId("loadingMsg");
+    var msgTimer = setInterval(function() {
+      if (loadingMsgEl && msgIdx < msgs.length - 1) loadingMsgEl.textContent = msgs[++msgIdx];
+    }, 3000);
+
+    var attempts = 0;
+    function tryFetch() {
+      fetch(url).then(function(resp) {
+        if (resp.status === 202) {
+          attempts++;
+          if (attempts < 45) { setTimeout(tryFetch, 1000); return; }
+          throw new Error("Server warming timed out");
+        }
+        if (!resp.ok) throw new Error("HTTP " + resp.status);
+        return resp.json();
+      }).then(function(data) {
+        clearInterval(dotTimer);
+        clearInterval(msgTimer);
+        while (dotIdx < 18) tickDot(dotIdx++, "ok");
+        _data = data;
+        _displayData = data;
+        renderAll(data);
+        updateStatus(data);
+        hideOverlay();
+        setRefreshBtn(false);
+      }).catch(function(err) {
+        clearInterval(dotTimer);
+        clearInterval(msgTimer);
+        console.error("Load failed:", err);
+        setStatusPill(t("statusFailed"), "err");
+        var eb = byId("errorBanner");
+        if (eb) { eb.classList.remove("hidden"); byId("errorDetail").textContent = " " + err.message; }
+        hideOverlay();
+        setRefreshBtn(false);
+      });
+    }
+    tryFetch();
+  }
+
+  function updateStatus(data) {
+    var fetched = data.fetched_at ? new Date(data.fetched_at).toLocaleTimeString("en-GB") : "";
+    var lu = byId("lastUpdated");
+    if (lu) lu.textContent = fetched ? "Last updated " + fetched : "";
+    var errCount = data.sources_error || 0;
+    if (errCount > 0) {
+      setStatusPill(data.sources_ok + "/" + data.total_sources + " sources · " + errCount + " failed", "err");
+    } else {
+      setStatusPill(data.sources_ok + "/" + data.total_sources + " sources · " + data.total_articles + " articles", "ok");
+    }
+  }
+
+  // ── Render ─────────────────────────────────────────────────────
+  function renderAll(d) {
+    renderStats(d);
+    renderIntelBrief(d);
+    renderCategories(d);
+    updateErrorBanner(d);
+  }
+
+  function renderStats(d) {
+    var bar = byId("statsBar");
+    if (!bar) return;
+    bar.innerHTML = '<div class="stat-card"><div class="stat-label">Total Articles</div><div class="stat-value accent">' + (d.total_articles||0) + '</div><div class="stat-sub">across all sources</div></div>' +
+      '<div class="stat-card"><div class="stat-label">Sources Active</div><div class="stat-value green">' + (d.sources_ok||0) + '</div><div class="stat-sub">of ' + (d.total_sources||0) + ' monitored</div></div>' +
+      '<div class="stat-card"><div class="stat-label">Sources Failed</div><div class="stat-value ' + ((d.sources_error||0)>0?"red":"green") + '">' + (d.sources_error||0) + '</div><div class="stat-sub">' + ((d.sources_error||0)>0?"check network":"all responding") + '</div></div>' +
+      '<div class="stat-card"><div class="stat-label">Categories</div><div class="stat-value orange">' + ((d.categories||[]).length) + '</div><div class="stat-sub">industry segments covered</div></div>' +
+      '<div class="stat-card"><div class="stat-label">Refresh Cadence</div><div class="stat-value" style="font-size:18px;color:var(--teal)">15 min</div><div class="stat-sub">auto-refresh · RSS+HTML</div></div>';
+  }
+
+  function renderCategories(d) {
+    var container = byId("categorySections");
+    if (!container) return;
+    container.innerHTML = "";
+    var summaries = d.category_summaries || {};
+    var cats = d.categories || Object.keys(summaries);
+    for (var ci = 0; ci < cats.length; ci++) {
+      var cat = cats[ci];
+      if (_activeFilter !== "all" && _activeFilter !== cat) continue;
+      var info = summaries[cat];
+      if (!info) continue;
+      var color = CAT_COLORS[cat] || "#8b949e";
+      var section = document.createElement("section");
+      section.className = "category-section";
+
+      var kwHtml = "";
+      var kws = (info.keywords || []).slice(0, 8);
+      for (var ki=0; ki<kws.length; ki++) kwHtml += '<span class="kw-tag">' + escHtml(kws[ki]) + '</span>';
+
+      var srcHtml = "";
+      var srcs = info.sources || [];
+      for (var si=0; si<srcs.length; si++) {
+        var s = srcs[si];
+        var cls = s.status === "ok" ? "ok" : "err";
+        srcHtml += '<span class="source-badge ' + cls + '" title="' + escHtml(s.error||s.name) + '"><span class="dot"></span>' + escHtml(s.name) + (s.count ? ' <span class="cnt">'+s.count+'</span>' : '') + '</span>';
+      }
+
+      var gridId = "grid-" + cat.replace(/\W+/g, "-");
+      section.innerHTML = '<div class="cat-section-header"><span class="cat-dot" style="background:' + color + '"></span><h2 class="cat-section-title">' + escHtml(cat) + '</h2><span class="cat-count">' + (info.count||0) + ' articles</span><div class="cat-keywords">' + kwHtml + '</div></div><div class="source-status-row">' + srcHtml + '</div><div class="articles-grid" id="' + escHtml(gridId) + '"></div>';
+      container.appendChild(section);
+
+      var grid = byId(gridId);
+      var articles = info.articles || [];
+      if (!articles.length) {
+        grid.innerHTML = '<div class="empty-state">No data yet.</div>';
+      } else {
+        for (var ai=0; ai<articles.length; ai++) {
+          grid.appendChild(makeCard(articles[ai], color));
+        }
+      }
+    }
+  }
+
+  function makeCard(article, catColor) {
+    var card = document.createElement("article");
+    card.className = "article-card";
+    card.style.setProperty("--cat-color", catColor);
+    var date = fmtDate(article.published);
+    card.innerHTML = '<div class="card-source-row"><span class="card-source-tag">' + escHtml(article.source_name) + '</span><div style="display:flex;align-items:center;gap:6px"><span class="card-method-badge">' + (article.method==="rss"?"RSS":"Web") + '</span>' + (date ? '<span class="card-date">' + date + '</span>' : '') + '</div></div><div class="card-title">' + escHtml(article.title) + '</div>' + (article.summary ? '<div class="card-summary">' + escHtml(article.summary) + '</div>' : '') + '<div class="card-footer"><span class="card-read-link">Read article &#8594;</span></div>';
+    card.addEventListener("click", function() { openModal(article, catColor); });
+    return card;
+  }
+
+  function openModal(article, catColor) {
+    byId("modalSource").textContent = article.source_name;
+    byId("modalSource").style.color = catColor;
+    byId("modalTitle").textContent = article.title;
+    byId("modalMeta").textContent = [article.category, article.published ? fmtDate(article.published) : "", article.method==="rss"?"via RSS":"via web"].filter(Boolean).join(" · ");
+    byId("modalSummary").textContent = article.summary || "No summary available.";
+    byId("modalLink").textContent = "Read full article \u2192";
+    byId("modalLink").href = article.url;
+    showModal();
+  }
+
+  // ── Intelligence Brief ────────────────────────────────────────
+  function renderIntelBrief(d) {
+    var brief = d && d.intelligence_brief;
+    var section = byId("intelBrief");
+    if (!brief || !section) return;
+    section.classList.remove("hidden");
+    renderBriefView(_briefView, brief);
+  }
+
+  function renderBriefView(view, brief) {
+    _briefView = view;
+    brief = brief || (_displayData && _displayData.intelligence_brief);
+    if (!brief) return;
+    var tabs = $$(".intel-tab");
+    for (var i=0; i<tabs.length; i++) tabs[i].classList.toggle("active", tabs[i].dataset.view === view);
+    var body = byId("intelBody");
+    if (!body) return;
+    if (view === "category") body.innerHTML = buildByCategoryHTML(brief);
+    else if (view === "region") body.innerHTML = buildByRegionHTML(brief);
+    else body.innerHTML = buildMatrixHTML(brief);
+  }
+
+  function buildByCategoryHTML(brief) {
+    var cats = Object.keys(brief.by_category || {});
+    if (!cats.length) return '<p style="color:var(--text-dim)">No data yet.</p>';
+    var html = '<div class="brief-cat-grid">';
+    for (var i=0; i<cats.length; i++) {
+      var cat = cats[i], d = brief.by_category[cat];
+      var color = CAT_COLORS[cat] || "#8b949e";
+      var thHtml = "", blHtml = "", hlHtml = "", rgHtml = "";
+      var ths = d.themes || [];
+      for (var j=0; j<ths.length; j++) thHtml += '<span class="brief-theme-tag">' + escHtml(ths[j]) + '</span>';
+      var bls = d.theme_bullets || [];
+      for (var j=0; j<bls.length; j++) blHtml += '<li>' + escHtml(bls[j]) + '</li>';
+      var hls = (d.top_headlines || []).slice(0,5);
+      for (var j=0; j<hls.length; j++) hlHtml += '<a class="brief-headline-link" href="' + escHtml(hls[j].url) + '" target="_blank" rel="noopener">' + escHtml(hls[j].title) + '</a>';
+      var rgs = d.regions_present || [];
+      for (var j=0; j<rgs.length; j++) rgHtml += '<span class="brief-region-chip">' + escHtml(rgs[j]) + '</span>';
+      html += '<div class="brief-cat-card" style="--cat-color:' + color + '"><div class="brief-cat-card-title">' + escHtml(cat) + '<span class="brief-count-badge">' + (d.count||0) + ' articles</span></div><div class="brief-themes">' + thHtml + '</div><ul class="brief-bullets">' + blHtml + '</ul><div class="brief-headlines">' + hlHtml + '</div><div class="brief-region-row">' + rgHtml + '</div></div>';
+    }
+    return html + '</div>';
+  }
+
+  function buildByRegionHTML(brief) {
+    var regions = brief.regions || Object.keys(brief.by_region || {});
+    if (!regions.length) return '<p style="color:var(--text-dim)">No data yet.</p>';
+    var html = '<div class="brief-region-grid">';
+    for (var i=0; i<regions.length; i++) {
+      var reg = regions[i], d = brief.by_region[reg];
+      if (!d) continue;
+      var color = REGION_COLORS[reg] || "#39d3bb";
+      var thHtml="", blHtml="", hlHtml="", ctHtml="";
+      var ths = d.themes || [];
+      for (var j=0; j<ths.length; j++) thHtml += '<span class="brief-theme-tag">' + escHtml(ths[j]) + '</span>';
+      var bls = d.theme_bullets || [];
+      for (var j=0; j<bls.length; j++) blHtml += '<li>' + escHtml(bls[j]) + '</li>';
+      var hls = (d.top_headlines || []).slice(0,5);
+      for (var j=0; j<hls.length; j++) hlHtml += '<a class="brief-headline-link" href="' + escHtml(hls[j].url) + '" target="_blank" rel="noopener">' + escHtml(hls[j].title) + '</a>';
+      var cats2 = d.categories_present || [];
+      for (var j=0; j<cats2.length; j++) ctHtml += '<span class="brief-region-chip" style="color:' + (CAT_COLORS[cats2[j]]||"#8b949e") + '">' + escHtml(cats2[j]) + '</span>';
+      html += '<div class="brief-region-card" style="--region-color:' + color + '"><div class="brief-region-card-title">' + escHtml(reg) + '<span class="brief-count-badge">' + (d.count||0) + ' articles</span></div>' + (d.countries&&d.countries.length ? '<div class="brief-countries">' + escHtml(d.countries.join(" · ")) + '</div>' : '') + '<div class="brief-themes">' + thHtml + '</div><ul class="brief-bullets">' + blHtml + '</ul><div class="brief-headlines">' + hlHtml + '</div><div class="brief-region-row">' + ctHtml + '</div></div>';
+    }
+    return html + '</div>';
+  }
+
+  function buildMatrixHTML(brief) {
+    var cats = Object.keys(brief.by_category || {});
+    var regions = brief.regions || Object.keys(brief.by_region || {});
+    if (!cats.length || !regions.length) return '<p style="color:var(--text-dim)">No data yet.</p>';
+    var thead = '<tr><th class="cat-header">Category \\ Region</th>';
+    for (var i=0; i<regions.length; i++) thead += '<th style="color:' + (REGION_COLORS[regions[i]]||"#39d3bb") + '">' + escHtml(regions[i]) + '</th>';
+    thead += '</tr>';
+    var rows = "";
+    for (var i=0; i<cats.length; i++) {
+      var cat = cats[i];
+      var color = CAT_COLORS[cat] || "#8b949e";
+      var cells = "";
+      for (var j=0; j<regions.length; j++) {
+        var cell = (brief.matrix[cat] || {})[regions[j]];
+        if (!cell) { cells += '<td><span class="matrix-cell-empty">—</span></td>'; continue; }
+        var kwHtml = "";
+        var kws2 = cell.hot_keywords || [];
+        for (var k=0; k<kws2.length; k++) kwHtml += '<span class="matrix-kw">' + escHtml(kws2[k]) + '</span>';
+        var hlHtml = "";
+        var hls2 = (cell.top_headlines || []).slice(0,2);
+        for (var k=0; k<hls2.length; k++) hlHtml += '<a class="matrix-headline" href="' + escHtml(hls2[k].url) + '" target="_blank" rel="noopener">' + escHtml(hls2[k].title) + '</a>';
+        cells += '<td><div class="matrix-cell-count">' + cell.count + '</div>' + hlHtml + '<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px">' + kwHtml + '</div></td>';
+      }
+      rows += '<tr><th style="color:' + color + '">' + escHtml(cat) + '</th>' + cells + '</tr>';
+    }
+    return '<div class="brief-matrix-wrap"><table class="brief-matrix"><thead>' + thead + '</thead><tbody>' + rows + '</tbody></table></div>';
+  }
+
+  function updateErrorBanner(d) {
+    var errs = (d.source_results || []).filter(function(r) { return r.status === "error"; });
+    var eb = byId("errorBanner");
+    if (!eb) return;
+    if (!errs.length) { eb.classList.add("hidden"); return; }
+    eb.classList.remove("hidden");
+    byId("errorDetail").textContent = " " + errs.length + " source(s) unavailable: " + errs.map(function(r){return r.source_name;}).join(", ");
+  }
+
+  // ── Event handlers ────────────────────────────────────────────
+  byId("btnRefresh").addEventListener("click", function() { loadNews(true); });
+  byId("btnPdf").addEventListener("click", function() { window.print(); });
+  byId("modalClose").addEventListener("click", hideModal);
+  byId("modalOverlay").addEventListener("click", function(e) { if (e.target === byId("modalOverlay")) hideModal(); });
+  document.addEventListener("keydown", function(e) { if (e.key === "Escape") hideModal(); });
+
+  byId("catBar").addEventListener("click", function(e) {
+    var btn = e.target;
+    while (btn && !btn.dataset.cat) btn = btn.parentElement;
+    if (!btn || !btn.dataset.cat) return;
+    var allBtns = $$(".cat-btn");
+    for (var i=0; i<allBtns.length; i++) allBtns[i].classList.remove("active");
+    btn.classList.add("active");
+    _activeFilter = btn.dataset.cat;
+    if (_displayData) renderCategories(_displayData);
+  });
+
+  byId("intelTabs").addEventListener("click", function(e) {
+    var tab = e.target;
+    while (tab && !tab.dataset.view) tab = tab.parentElement;
+    if (!tab || !tab.dataset.view) return;
+    renderBriefView(tab.dataset.view);
+  });
+
+  // ── Boot ──────────────────────────────────────────────────────
+  loadNews(false);
+
+  // Status poll every 60s
+  setInterval(function() {
+    fetch("/api/status").then(function(r) { return r.json(); }).then(function(s) {
+      if (!s.cache_valid && !s.warming) loadNews(false);
+    }).catch(function() {});
+  }, 60000);
+
+})();
 </script>
-<script src="/static/js/i18n.js?v={{ js_ver_i18n }}"></script>
-<script src="/static/js/dashboard.js?v={{ js_ver_dash }}"></script>
 </body>
 </html>
