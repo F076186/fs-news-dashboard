@@ -168,38 +168,38 @@ function isFrench()  { return _lang === "fr"; }
  * Walk all [data-i18n] elements and replace their textContent.
  */
 function applyStaticStrings() {
+  // Static [data-i18n] elements
   document.querySelectorAll("[data-i18n]").forEach(el => {
     const key = el.getAttribute("data-i18n");
     const val = t(key);
     if (typeof val === "string") el.textContent = val;
   });
 
-  // Refresh button text (contains an SVG, so only replace the text node)
+  // Refresh button — contains an SVG so we only swap the trailing text node
   const btnRefresh = document.getElementById("btnRefresh");
   if (btnRefresh) {
-    const textNode = [...btnRefresh.childNodes].find(n => n.nodeType === Node.TEXT_NODE);
-    if (textNode) textNode.textContent = " " + t("refresh");
+    // Find the last text node (after the SVG)
+    const textNode = [...btnRefresh.childNodes]
+      .reverse()
+      .find(n => n.nodeType === 3 /* TEXT_NODE */);
+    if (textNode) textNode.nodeValue = " " + t("refresh");
   }
 
   // Category filter "All" button
   const allBtn = document.querySelector('.cat-btn[data-cat="all"]');
   if (allBtn) allBtn.textContent = t("all");
 
-  // Category filter named buttons
-  const CAT_MAP = {
-    "Banking News":          t("Banking News"),
-    "FinTech & Innovation":  t("FinTech & Innovation"),
-    "Insurance":             t("Insurance"),
-    "Regulation":            t("Regulation"),
-    "Strategy & Consulting": t("Strategy & Consulting"),
-  };
+  // Category filter named buttons (rendered by Jinja with English names)
+  const CAT_KEYS = ["Banking News","FinTech & Innovation","Insurance","Regulation","Strategy & Consulting"];
   document.querySelectorAll(".cat-btn[data-cat]").forEach(btn => {
     const cat = btn.getAttribute("data-cat");
-    if (cat && cat !== "all" && CAT_MAP[cat]) btn.textContent = CAT_MAP[cat];
+    if (cat && cat !== "all" && CAT_KEYS.includes(cat)) {
+      btn.textContent = t(cat);
+    }
   });
 
-  // html lang attribute
-  document.getElementById("htmlRoot").setAttribute("lang", _lang);
+  // html[lang] attribute — use document.documentElement, never getElementById
+  document.documentElement.setAttribute("lang", _lang);
 
   // Page title
   document.title = _lang === "fr"

@@ -53,9 +53,11 @@ function setStatusPill(text, cls) {
 
 function setRefreshBtn(loading) {
   const btn = $("#btnRefresh");
+  if (!btn) return;
   btn.disabled = loading;
   btn.classList.toggle("spinning", loading);
-  btn.querySelector("svg").style.animation = loading ? "spin .8s linear infinite" : "";
+  const svg = btn.querySelector("svg");
+  if (svg) svg.style.animation = loading ? "spin .8s linear infinite" : "";
 }
 
 const { t, isFrench, applyStaticStrings, translateData, initLang } = window.i18n;
@@ -632,11 +634,17 @@ async function onLangToggle(lang) {
 
 // ── Boot ────────────────────────────────────────────────────────────────
 (function init() {
-  initCategoryFilter();
-  initIntelBriefTabs();
-  initEventHandlers();
-  initLang(onLangToggle);
-  applyStaticStrings();
+  try {
+    initCategoryFilter();
+    initIntelBriefTabs();
+    initEventHandlers();
+    initLang(onLangToggle);
+    applyStaticStrings();
+  } catch (e) {
+    // UI init error — log but don't block news loading
+    console.error("UI init error:", e);
+  }
+  // Always attempt to load news regardless of UI init errors
   loadNews(false);
   startPolling();
 })();
